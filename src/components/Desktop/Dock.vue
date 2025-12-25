@@ -31,7 +31,6 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import AppIcons from '@/components/icons/AppIcons.vue'
 import { useWindowsStore } from '@/stores/windows'
 import ChatApp from '@/components/Apps/ChatApp.vue'
-import TerminalApp from '@/components/Apps/TerminalApp.vue'
 
 interface App {
   id: string
@@ -54,62 +53,6 @@ const props = withDefaults(defineProps<Props>(), {
       name: '聊天',
       icon: '',
       iconName: 'chat',
-      isActive: false,
-      isRunning: true
-    },
-    {
-      id: 'safari',
-      name: 'Safari',
-      icon: '',
-      iconName: 'safari',
-      isActive: false,
-      isRunning: false
-    },
-    {
-      id: 'chrome',
-      name: 'Chrome',
-      icon: '',
-      iconName: 'chrome',
-      isActive: false,
-      isRunning: true
-    },
-    {
-      id: 'vscode',
-      name: 'VS Code',
-      icon: '',
-      iconName: 'vscode',
-      isActive: true,
-      isRunning: true
-    },
-    {
-      id: 'terminal',
-      name: 'Terminal',
-      icon: '',
-      iconName: 'terminal',
-      isActive: false,
-      isRunning: false
-    },
-    {
-      id: 'music',
-      name: 'Music',
-      icon: '',
-      iconName: 'music',
-      isActive: false,
-      isRunning: false
-    },
-    {
-      id: 'settings',
-      name: 'System Preferences',
-      icon: '',
-      iconName: 'settings',
-      isActive: false,
-      isRunning: false
-    },
-    {
-      id: 'trash',
-      name: 'Trash',
-      icon: '',
-      iconName: 'trash',
       isActive: false,
       isRunning: false
     }
@@ -215,15 +158,7 @@ const isAppRunning = (appId: string) => {
 // 获取应用对应的组件
 const getAppComponent = (appId: string) => {
   const components: Record<string, any> = {
-    chat: ChatApp,
-    terminal: TerminalApp,
-    // 其他应用暂时使用默认内容
-    safari: null,
-    chrome: null,
-    vscode: null,
-    music: null,
-    settings: null,
-    trash: null
+    chat: ChatApp
   }
   
   return components[appId] || null

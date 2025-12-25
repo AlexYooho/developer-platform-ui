@@ -39,31 +39,6 @@
       </button>
     </div>
     
-    <!-- 右键菜单 -->
-    <div 
-      v-if="showContextMenu" 
-      class="context-menu"
-      :style="contextMenuStyle"
-      @click.stop
-    >
-      <div class="menu-item" @click="handleMenuAction('new-folder')">
-        <span class="menu-icon">📁</span>
-        新建文件夹
-      </div>
-      <div class="menu-item" @click="handleMenuAction('refresh')">
-        <span class="menu-icon">🔄</span>
-        刷新桌面
-      </div>
-      <div class="menu-divider"></div>
-      <div class="menu-item" @click="handleMenuAction('wallpaper')">
-        <span class="menu-icon">🖼️</span>
-        更换壁纸
-      </div>
-      <div class="menu-item" @click="handleMenuAction('settings')">
-        <span class="menu-icon">⚙️</span>
-        桌面设置
-      </div>
-    </div>
     
     <!-- 窗口系统 -->
     <Window
@@ -91,6 +66,7 @@ import Dock from '@/components/Desktop/Dock.vue'
 import AppIcons from '@/components/icons/AppIcons.vue'
 import AuthContainer from '@/components/Auth/AuthContainer.vue'
 import Window from '@/components/Desktop/Window.vue'
+import ChatApp from '@/components/Apps/ChatApp.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWindowsStore } from '@/stores/windows'
 
@@ -164,77 +140,11 @@ const dockApps = reactive<App[]>([
     icon: '',
     iconName: 'chat',
     isActive: false,
-    isRunning: true,
+    isRunning: false,
     onClick: () => console.log('打开聊天')
-  },
-  {
-    id: 'safari',
-    name: 'Safari',
-    icon: '',
-    iconName: 'safari',
-    isActive: false,
-    isRunning: false,
-    onClick: () => console.log('打开Safari')
-  },
-  {
-    id: 'chrome',
-    name: 'Chrome',
-    icon: '',
-    iconName: 'chrome',
-    isActive: false,
-    isRunning: true,
-    onClick: () => console.log('打开Chrome')
-  },
-  {
-    id: 'vscode',
-    name: 'VS Code',
-    icon: '',
-    iconName: 'vscode',
-    isActive: true,
-    isRunning: true,
-    onClick: () => console.log('打开VS Code')
-  },
-  {
-    id: 'terminal',
-    name: 'Terminal',
-    icon: '',
-    iconName: 'terminal',
-    isActive: false,
-    isRunning: false,
-    onClick: () => console.log('打开Terminal')
-  },
-  {
-    id: 'music',
-    name: 'Music',
-    icon: '',
-    iconName: 'music',
-    isActive: false,
-    isRunning: false,
-    onClick: () => console.log('打开Music')
-  },
-  {
-    id: 'settings',
-    name: 'System Preferences',
-    icon: '',
-    iconName: 'settings',
-    isActive: false,
-    isRunning: false,
-    onClick: () => console.log('打开系统偏好设置')
-  },
-  {
-    id: 'trash',
-    name: 'Trash',
-    icon: '',
-    iconName: 'trash',
-    isActive: false,
-    isRunning: false,
-    onClick: () => console.log('打开废纸篓')
   }
 ])
 
-// 右键菜单
-const showContextMenu = ref(false)
-const contextMenuStyle = ref({})
 
 // 更新时间
 const updateTime = () => {
@@ -261,44 +171,53 @@ const handleIconDoubleClick = (icon: DesktopIcon) => {
 // 处理Dock应用点击
 const handleAppClick = (app: App) => {
   console.log(`从Dock点击了应用: ${app.name}`)
-  // 这里可以添加打开应用的逻辑
-}
-
-// 处理右键菜单
-const handleContextMenu = (event: MouseEvent) => {
-  event.preventDefault()
-  showContextMenu.value = true
-  contextMenuStyle.value = {
-    left: `${event.clientX}px`,
-    top: `${event.clientY}px`
-  }
-}
-
-// 处理菜单操作
-const handleMenuAction = (action: string) => {
-  console.log(`执行菜单操作: ${action}`)
-  showContextMenu.value = false
   
-  switch (action) {
-    case 'new-folder':
-      // 创建新文件夹逻辑
-      break
-    case 'refresh':
-      // 刷新桌面逻辑
-      break
-    case 'wallpaper':
-      // 更换壁纸逻辑
-      break
-    case 'settings':
-      // 打开桌面设置逻辑
-      break
+  // 应用组件映射
+  const appComponents: Record<string, any> = {
+    chat: ChatApp
+  }
+  
+  // 应用配置
+  const appConfigs: Record<string, { title: string; width?: number; height?: number; icon?: string }> = {
+    chat: { title: '聊天', width: 800, height: 600, icon: '💬' }
+  }
+  
+  const component = appComponents[app.id]
+  const config = appConfigs[app.id]
+  
+  if (component && config) {
+    // 检查是否已经有该应用的窗口打开
+    const existingWindow = windowsStore.windows.find(w => w.appId === app.id)
+    
+    if (existingWindow) {
+      // 如果窗口已存在，激活它
+      if (existingWindow.isMinimized) {
+        windowsStore.restoreWindow(existingWindow.id)
+      } else {
+        windowsStore.focusWindow(existingWindow.id)
+      }
+    } else {
+      // 创建新窗口
+      windowsStore.createWindow({
+        appId: app.id,
+        title: config.title,
+        icon: config.icon,
+        component: component,
+        width: config.width,
+        height: config.height,
+        minWidth: 400,
+        minHeight: 300
+      })
+    }
+    
+    // 更新dock中的运行状态
+    const dockApp = dockApps.find(a => a.id === app.id)
+    if (dockApp) {
+      dockApp.isRunning = true
+    }
   }
 }
 
-// 隐藏右键菜单
-const hideContextMenu = () => {
-  showContextMenu.value = false
-}
 
 // 处理登录成功
 const handleLoginSuccess = (userData: any) => {
@@ -334,15 +253,9 @@ onMounted(() => {
   // 检查登录状态
   checkLoginStatus()
   
-  // 添加事件监听
-  document.addEventListener('contextmenu', handleContextMenu)
-  document.addEventListener('click', hideContextMenu)
-  
   // 清理函数
   onUnmounted(() => {
     clearInterval(timeInterval)
-    document.removeEventListener('contextmenu', handleContextMenu)
-    document.removeEventListener('click', hideContextMenu)
   })
 })
 </script>
@@ -504,54 +417,6 @@ onMounted(() => {
   transform: scale(1.1);
 }
 
-.context-menu {
-  position: fixed;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(20px);
-  border-radius: 8px;
-  padding: 4px;
-  min-width: 180px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  z-index: 2000;
-  animation: contextMenuFadeIn 0.15s ease;
-}
-
-@keyframes contextMenuFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.15s ease;
-  font-size: 14px;
-}
-
-.menu-item:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.menu-icon {
-  margin-right: 8px;
-  font-size: 16px;
-}
-
-.menu-divider {
-  height: 1px;
-  background: rgba(0, 0, 0, 0.1);
-  margin: 4px 8px;
-}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -636,9 +501,6 @@ onMounted(() => {
     height: 48px;
   }
   
-  .context-menu {
-    min-width: 160px;
-  }
   
   .user-info {
     top: 15px;

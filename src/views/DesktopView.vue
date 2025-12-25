@@ -67,6 +67,8 @@ import AppIcons from '@/components/icons/AppIcons.vue'
 import AuthContainer from '@/components/Auth/AuthContainer.vue'
 import Window from '@/components/Desktop/Window.vue'
 import ChatApp from '@/components/Apps/ChatApp.vue'
+import FileManagerApp from '@/components/Apps/FileManagerApp.vue'
+import PhotosApp from '@/components/Apps/PhotosApp.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWindowsStore } from '@/stores/windows'
 
@@ -142,6 +144,24 @@ const dockApps = reactive<App[]>([
     isActive: false,
     isRunning: false,
     onClick: () => console.log('打开聊天')
+  },
+  {
+    id: 'filemanager',
+    name: '文件管理',
+    icon: '',
+    iconName: 'filemanager',
+    isActive: false,
+    isRunning: false,
+    onClick: () => console.log('打开文件管理')
+  },
+  {
+    id: 'photos',
+    name: '相册',
+    icon: '',
+    iconName: 'photos',
+    isActive: false,
+    isRunning: false,
+    onClick: () => console.log('打开相册')
   }
 ])
 
@@ -174,12 +194,16 @@ const handleAppClick = (app: App) => {
   
   // 应用组件映射
   const appComponents: Record<string, any> = {
-    chat: ChatApp
+    chat: ChatApp,
+    filemanager: FileManagerApp,
+    photos: PhotosApp
   }
   
   // 应用配置
   const appConfigs: Record<string, { title: string; width?: number; height?: number; icon?: string }> = {
-    chat: { title: '聊天', width: 800, height: 600, icon: '💬' }
+    chat: { title: '聊天', width: 800, height: 600, icon: '💬' },
+    filemanager: { title: '文件管理', width: 900, height: 650, icon: '📁' },
+    photos: { title: '相册', width: 1000, height: 700, icon: '🖼️' }
   }
   
   const component = appComponents[app.id]

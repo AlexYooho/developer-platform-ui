@@ -31,6 +31,8 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import AppIcons from '@/components/icons/AppIcons.vue'
 import { useWindowsStore } from '@/stores/windows'
 import ChatApp from '@/components/Apps/ChatApp.vue'
+import FileManagerApp from '@/components/Apps/FileManagerApp.vue'
+import PhotosApp from '@/components/Apps/PhotosApp.vue'
 
 interface App {
   id: string
@@ -53,6 +55,22 @@ const props = withDefaults(defineProps<Props>(), {
       name: '聊天',
       icon: '',
       iconName: 'chat',
+      isActive: false,
+      isRunning: false
+    },
+    {
+      id: 'filemanager',
+      name: '文件管理',
+      icon: '',
+      iconName: 'filemanager',
+      isActive: false,
+      isRunning: false
+    },
+    {
+      id: 'photos',
+      name: '相册',
+      icon: '',
+      iconName: 'photos',
       isActive: false,
       isRunning: false
     }
@@ -158,7 +176,9 @@ const isAppRunning = (appId: string) => {
 // 获取应用对应的组件
 const getAppComponent = (appId: string) => {
   const components: Record<string, any> = {
-    chat: ChatApp
+    chat: ChatApp,
+    filemanager: FileManagerApp,
+    photos: PhotosApp
   }
   
   return components[appId] || null

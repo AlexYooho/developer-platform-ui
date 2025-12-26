@@ -1,159 +1,223 @@
 <template>
   <div class="chat-app">
-    <!-- 聊天头部 -->
-    <div class="chat-header">
-      <div class="chat-info">
-        <div class="avatar">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" alt="头像" />
-        </div>
-        <div class="user-info">
-          <div class="username">好友聊天</div>
-          <div class="status">在线</div>
-        </div>
-      </div>
-      <div class="chat-actions">
-        <button class="action-btn" title="语音通话">📞</button>
-        <button class="action-btn" title="视频通话">📹</button>
-        <button class="action-btn" title="更多">⋯</button>
-      </div>
-    </div>
-
-    <!-- 聊天消息区域 -->
-    <div class="chat-messages" ref="messagesContainer">
-      <div 
-        v-for="message in messages" 
-        :key="message.id"
-        class="message"
-        :class="{ 'message-sent': message.isSent, 'message-received': !message.isSent }"
-      >
-        <div class="message-avatar" v-if="!message.isSent">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" alt="头像" />
-        </div>
-        <div class="message-content">
-          <div class="message-bubble">
-            <div class="message-text">{{ message.text }}</div>
-            <div class="message-time">{{ formatTime(message.timestamp) }}</div>
-          </div>
-        </div>
-        <div class="message-avatar" v-if="message.isSent">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=me" alt="我的头像" />
-        </div>
-      </div>
-    </div>
-
-    <!-- 输入区域 -->
-    <div class="chat-input">
-      <div class="input-toolbar">
-        <button class="toolbar-btn" title="表情">😊</button>
-        <button class="toolbar-btn" title="文件">📎</button>
-        <button class="toolbar-btn" title="图片">🖼️</button>
-      </div>
-      <div class="input-area">
-        <textarea
-          v-model="currentMessage"
-          placeholder="输入消息..."
-          @keydown="handleKeydown"
-          @input="adjustTextareaHeight"
-          ref="messageInput"
-          rows="1"
-        ></textarea>
-        <button 
-          class="send-btn"
-          :disabled="!currentMessage.trim()"
-          @click="sendMessage"
-        >
-          发送
-        </button>
-      </div>
-    </div>
+    <!-- 侧边栏 -->
+    <ChatSidebar
+      :contacts="contacts"
+      :active-contact-id="activeContact?.id"
+      :current-user="currentUser"
+      @contact-selected="handleContactSelected"
+      @settings-clicked="showSettings"
+    />
+    
+    <!-- 主聊天区域 -->
+    <ChatMain
+      :active-contact="activeContact"
+      :messages="currentMessages"
+      @send-message="handleSendMessage"
+      @voice-call="handleVoiceCall"
+      @video-call="handleVideoCall"
+      @file-upload="handleFileUpload"
+      @message-delete="handleMessageDelete"
+      @message-resend="handleMessageResend"
+    />
+    
+    <!-- 用户信息面板 -->
+    <UserInfoPanel
+      :contact="activeContact"
+      :is-visible="showUserInfo"
+      @close="hideUserInfo"
+      @start-chat="handleStartChat"
+      @voice-call="handleVoiceCall"
+      @video-call="handleVideoCall"
+      @open-group="handleOpenGroup"
+      @open-file="handleOpenFile"
+      @mute-contact="handleMuteContact"
+      @pin-contact="handlePinContact"
+      @block-contact="handleBlockContact"
+      @delete-contact="handleDeleteContact"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import ChatSidebar from '@/components/Chat/ChatSidebar.vue'
+import ChatMain from '@/components/Chat/ChatMain.vue'
+import UserInfoPanel from '@/components/Chat/UserInfoPanel.vue'
+import type { Contact } from '@/components/Chat/ChatSidebar.vue'
+import type { Message } from '@/components/Chat/ChatMain.vue'
 
-interface Message {
-  id: string
-  text: string
-  timestamp: number
-  isSent: boolean
-}
+// 当前用户信息
+const currentUser = ref({
+  id: 'me',
+  name: '我',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=me',
+  status: '在线'
+})
 
-const messagesContainer = ref<HTMLElement>()
-const messageInput = ref<HTMLTextAreaElement>()
-const currentMessage = ref('')
-
-const messages = reactive<Message[]>([
+// 联系人列表
+const contacts = reactive<Contact[]>([
   {
     id: '1',
-    text: '你好！今天过得怎么样？',
-    timestamp: Date.now() - 300000,
-    isSent: false
+    name: 'Sarah Designer',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
+    status: 'online',
+    lastMessage: 'Inter 不错，但也许可以试试更现代一点的？',
+    lastMessageTime: Date.now() - 300000,
+    unreadCount: 0
   },
   {
     id: '2',
-    text: '还不错！刚刚在开发一个新项目',
-    timestamp: Date.now() - 240000,
-    isSent: true
+    name: '技术团队会议',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=team',
+    status: 'online',
+    lastMessage: '你好，会议室可以预约吗？',
+    lastMessageTime: Date.now() - 360000,
+    unreadCount: 5
   },
   {
     id: '3',
-    text: '听起来很有趣，是什么项目呢？',
-    timestamp: Date.now() - 180000,
-    isSent: false
+    name: 'Mike Product',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike',
+    status: 'away',
+    lastMessage: '昨天了，看 Notion，我们聊聊吧...',
+    lastMessageTime: Date.now() - 600000,
+    unreadCount: 1
   },
   {
     id: '4',
-    text: '一个仿macOS的桌面系统，用Vue 3开发的',
-    timestamp: Date.now() - 120000,
-    isSent: true
+    name: 'David Backend',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=david',
+    status: 'offline',
+    lastMessage: '你好啊，我来晚了点...',
+    lastMessageTime: Date.now() - 86400000,
+    unreadCount: 0
   },
   {
     id: '5',
-    text: '哇，那一定很酷！可以给我看看吗？',
-    timestamp: Date.now() - 60000,
-    isSent: false
+    name: '设计小组',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=design',
+    status: 'online',
+    lastMessage: '经验交流新想法！',
+    lastMessageTime: Date.now() - 3600000,
+    unreadCount: 0
+  },
+  {
+    id: '6',
+    name: 'Emily Davis',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emily',
+    status: 'online',
+    lastMessage: '你有空一起看看吗？',
+    lastMessageTime: Date.now() - 3660000,
+    unreadCount: 3
   }
 ])
 
-// 格式化时间
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - timestamp
+// 所有消息数据（按联系人ID分组）
+const allMessages = reactive<Record<string, Message[]>>({
+  '1': [
+    {
+      id: '1',
+      text: 'Inter 不错，但也许可以试试更现代一点的？',
+      timestamp: Date.now() - 3600000,
+      isSent: false,
+      status: 'read'
+    },
+    {
+      id: '2',
+      text: '数据！我们试试 Rounded Mplus 吧。',
+      timestamp: Date.now() - 3300000,
+      isSent: false,
+      status: 'read'
+    },
+    {
+      id: '3',
+      text: '听起来不错。',
+      timestamp: Date.now() - 1800000,
+      isSent: true,
+      status: 'read'
+    }
+  ],
+  '2': [
+    {
+      id: '4',
+      text: '你好，会议室可以预约吗？',
+      timestamp: Date.now() - 360000,
+      isSent: false,
+      status: 'delivered'
+    }
+  ],
+  '3': [
+    {
+      id: '5',
+      text: '昨天了，看 Notion，我们聊聊吧...',
+      timestamp: Date.now() - 600000,
+      isSent: false,
+      status: 'sent'
+    }
+  ]
+})
+
+// 当前选中的联系人
+const activeContact = ref<Contact | null>(null)
+
+// 是否显示用户信息面板
+const showUserInfo = ref(true)
+
+// 当前聊天的消息
+const currentMessages = computed(() => {
+  if (!activeContact.value) return []
+  return allMessages[activeContact.value.id] || []
+})
+
+// 处理联系人选择
+const handleContactSelected = (contact: Contact) => {
+  activeContact.value = contact
+  showUserInfo.value = true
   
-  if (diff < 60000) { // 1分钟内
-    return '刚刚'
-  } else if (diff < 3600000) { // 1小时内
-    return `${Math.floor(diff / 60000)}分钟前`
-  } else if (date.toDateString() === now.toDateString()) { // 今天
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  } else {
-    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+  // 清除未读消息数
+  const contactIndex = contacts.findIndex(c => c.id === contact.id)
+  if (contactIndex !== -1) {
+    contacts[contactIndex]!.unreadCount = 0
   }
 }
 
-// 发送消息
-const sendMessage = () => {
-  if (!currentMessage.value.trim()) return
+// 处理发送消息
+const handleSendMessage = (data: { text: string; type: string }) => {
+  if (!activeContact.value) return
   
   const newMessage: Message = {
     id: Date.now().toString(),
-    text: currentMessage.value.trim(),
+    text: data.text,
     timestamp: Date.now(),
-    isSent: true
+    isSent: true,
+    status: 'sending',
+    type: data.type as any
   }
   
-  messages.push(newMessage)
-  currentMessage.value = ''
+  // 添加到消息列表
+  if (!allMessages[activeContact.value.id]) {
+    allMessages[activeContact.value.id] = []
+  }
+  allMessages[activeContact.value.id]?.push(newMessage)
   
-  // 重置输入框高度
-  if (messageInput.value) {
-    messageInput.value.style.height = 'auto'
+  // 更新联系人的最后消息
+  const contactIndex = contacts.findIndex(c => c.id === activeContact.value?.id)
+  if (contactIndex !== -1) {
+    contacts[contactIndex]!.lastMessage = data.text
+    contacts[contactIndex]!.lastMessageTime = Date.now()
   }
   
-  // 滚动到底部
-  scrollToBottom()
+  // 模拟发送状态变化
+  setTimeout(() => {
+    newMessage.status = 'sent'
+    setTimeout(() => {
+      newMessage.status = 'delivered'
+      setTimeout(() => {
+        newMessage.status = 'read'
+      }, 1000)
+    }, 500)
+  }, 500)
   
   // 模拟对方回复
   setTimeout(() => {
@@ -163,48 +227,167 @@ const sendMessage = () => {
       '我也想试试',
       '教教我怎么做的',
       '有时间一起讨论一下',
-      '期待看到最终效果'
+      '期待看到最终效果',
+      '好的，明白了',
+      '收到！'
     ]
     const randomReply = replies[Math.floor(Math.random() * replies.length)] || '好的'
     
-    messages.push({
+    const replyMessage: Message = {
       id: (Date.now() + 1).toString(),
       text: randomReply,
       timestamp: Date.now(),
-      isSent: false
-    })
+      isSent: false,
+      status: 'read'
+    }
     
-    scrollToBottom()
+    if (activeContact.value) {
+      allMessages[activeContact.value.id]?.push(replyMessage)
+      
+      // 更新联系人的最后消息
+      if (contactIndex !== -1) {
+        contacts[contactIndex]!.lastMessage = randomReply
+        contacts[contactIndex]!.lastMessageTime = Date.now()
+      }
+    }
   }, 1000 + Math.random() * 2000)
 }
 
-// 处理键盘事件
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault()
-    sendMessage()
-  }
+// 处理语音通话
+const handleVoiceCall = (contact: Contact) => {
+  console.log('开始语音通话:', contact.name)
+  // 这里可以集成实际的语音通话功能
 }
 
-// 自动调整输入框高度
-const adjustTextareaHeight = () => {
-  if (messageInput.value) {
-    messageInput.value.style.height = 'auto'
-    messageInput.value.style.height = Math.min(messageInput.value.scrollHeight, 120) + 'px'
-  }
+// 处理视频通话
+const handleVideoCall = (contact: Contact) => {
+  console.log('开始视频通话:', contact.name)
+  // 这里可以集成实际的视频通话功能
 }
 
-// 滚动到底部
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+// 处理文件上传
+const handleFileUpload = (file: File) => {
+  console.log('上传文件:', file.name)
+  // 这里可以处理文件上传逻辑
+  
+  // 模拟文件消息
+  if (activeContact.value) {
+    const fileMessage: Message = {
+      id: Date.now().toString(),
+      text: file.name,
+      timestamp: Date.now(),
+      isSent: true,
+      status: 'sent',
+      type: file.type.startsWith('image/') ? 'image' : 'file',
+      fileName: file.name,
+      fileSize: file.size,
+      fileUrl: URL.createObjectURL(file)
     }
-  })
+    
+    if (!allMessages[activeContact.value.id]) {
+      allMessages[activeContact.value.id] = []
+    }
+    allMessages[activeContact.value.id]?.push(fileMessage)
+  }
+}
+
+// 处理消息删除
+const handleMessageDelete = (messageId: string) => {
+  if (!activeContact.value) return
+  
+  const messages = allMessages[activeContact.value.id]
+  if (messages) {
+    const index = messages.findIndex(m => m.id === messageId)
+    if (index !== -1) {
+      messages.splice(index, 1)
+    }
+  }
+}
+
+// 处理消息重发
+const handleMessageResend = (messageId: string) => {
+  if (!activeContact.value) return
+  
+  const messages = allMessages[activeContact.value.id]
+  if (messages) {
+    const message = messages.find(m => m.id === messageId)
+    if (message) {
+      message.status = 'sending'
+      setTimeout(() => {
+        if (message) {
+          message.status = 'sent'
+        }
+      }, 1000)
+    }
+  }
+}
+
+// 显示设置
+const showSettings = () => {
+  console.log('显示设置')
+}
+
+
+// 隐藏用户信息面板
+const hideUserInfo = () => {
+  showUserInfo.value = false
+}
+
+// 处理开始聊天
+const handleStartChat = (contact: Contact) => {
+  activeContact.value = contact
+  showUserInfo.value = true
+}
+
+// 处理打开群组
+const handleOpenGroup = (group: any) => {
+  console.log('打开群组:', group.name)
+}
+
+// 处理打开文件
+const handleOpenFile = (file: any) => {
+  console.log('打开文件:', file.name)
+}
+
+// 处理静音联系人
+const handleMuteContact = (contact: Contact) => {
+  console.log('静音联系人:', contact.name)
+  // 这里可以实现静音逻辑
+}
+
+// 处理置顶联系人
+const handlePinContact = (contact: Contact) => {
+  console.log('置顶联系人:', contact.name)
+  // 这里可以实现置顶逻辑
+}
+
+// 处理屏蔽联系人
+const handleBlockContact = (contact: Contact) => {
+  console.log('屏蔽联系人:', contact.name)
+  // 这里可以实现屏蔽逻辑
+}
+
+// 处理删除联系人
+const handleDeleteContact = (contact: Contact) => {
+  console.log('删除联系人:', contact.name)
+  // 这里可以实现删除逻辑
+  const index = contacts.findIndex(c => c.id === contact.id)
+  if (index !== -1) {
+    contacts.splice(index, 1)
+    if (activeContact.value?.id === contact.id) {
+      activeContact.value = null
+    }
+  }
 }
 
 onMounted(() => {
-  scrollToBottom()
+  // 默认选中第一个联系人
+  if (contacts.length > 0) {
+    const firstContact = contacts[0]
+    if (firstContact) {
+      handleContactSelected(firstContact)
+    }
+  }
 })
 </script>
 
@@ -212,262 +395,14 @@ onMounted(() => {
 .chat-app {
   height: 100%;
   display: flex;
-  flex-direction: column;
-  background: #f5f5f5;
-}
-
-.chat-header {
-  height: 60px;
-  background: white;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-}
-
-.chat-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  background: #f8f9fa;
   overflow: hidden;
-}
-
-.avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.username {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-}
-
-.status {
-  font-size: 12px;
-  color: #00C851;
-}
-
-.chat-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: #f0f0f0;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: background-color 0.2s ease;
-}
-
-.action-btn:hover {
-  background: #e0e0e0;
-}
-
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.message {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  max-width: 80%;
-}
-
-.message-sent {
-  align-self: flex-end;
-  flex-direction: row-reverse;
-}
-
-.message-received {
-  align-self: flex-start;
-}
-
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.message-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.message-content {
-  flex: 1;
-}
-
-.message-bubble {
-  padding: 12px 16px;
-  border-radius: 18px;
-  position: relative;
-}
-
-.message-sent .message-bubble {
-  background: #007AFF;
-  color: white;
-  border-bottom-right-radius: 6px;
-}
-
-.message-received .message-bubble {
-  background: white;
-  color: #333;
-  border: 1px solid #e0e0e0;
-  border-bottom-left-radius: 6px;
-}
-
-.message-text {
-  font-size: 14px;
-  line-height: 1.4;
-  word-wrap: break-word;
-}
-
-.message-time {
-  font-size: 11px;
-  opacity: 0.7;
-  margin-top: 4px;
-}
-
-.chat-input {
-  background: white;
-  border-top: 1px solid #e0e0e0;
-  padding: 12px 20px;
-}
-
-.input-toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.toolbar-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: #f0f0f0;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: background-color 0.2s ease;
-}
-
-.toolbar-btn:hover {
-  background: #e0e0e0;
-}
-
-.input-area {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-}
-
-.input-area textarea {
-  flex: 1;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-family: inherit;
-  resize: none;
-  outline: none;
-  min-height: 40px;
-  max-height: 120px;
-  line-height: 1.4;
-}
-
-.input-area textarea:focus {
-  border-color: #007AFF;
-}
-
-.send-btn {
-  padding: 10px 20px;
-  background: #007AFF;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.send-btn:hover:not(:disabled) {
-  background: #0056CC;
-}
-
-.send-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-/* 滚动条样式 */
-.chat-messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.chat-messages::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: #999;
 }
 
 /* 响应式设计 */
-@media (max-width: 600px) {
-  .chat-header {
-    padding: 0 12px;
-  }
-  
-  .chat-messages {
-    padding: 12px;
-  }
-  
-  .chat-input {
-    padding: 8px 12px;
-  }
-  
-  .message {
-    max-width: 90%;
+@media (max-width: 768px) {
+  .chat-app {
+    flex-direction: column;
   }
 }
 </style>

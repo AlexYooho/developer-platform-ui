@@ -201,7 +201,7 @@ const handleAppClick = (app: App) => {
   
   // 应用配置
   const appConfigs: Record<string, { title: string; width?: number; height?: number; icon?: string }> = {
-    chat: { title: '聊天', width: 800, height: 600, icon: '💬' },
+    chat: { title: '聊天', width: 1000, height: 700, icon: '💬' },
     filemanager: { title: '文件管理', width: 900, height: 650, icon: '📁' },
     photos: { title: '相册', width: 1000, height: 700, icon: '🖼️' }
   }
@@ -214,7 +214,11 @@ const handleAppClick = (app: App) => {
     const existingWindow = windowsStore.windows.find(w => w.appId === app.id)
     
     if (existingWindow) {
-      // 如果窗口已存在，激活它
+      // 如果窗口已存在，更新尺寸并激活它
+      windowsStore.updateWindow(existingWindow.id, {
+        width: config.width || 800,
+        height: config.height || 600
+      })
       if (existingWindow.isMinimized) {
         windowsStore.restoreWindow(existingWindow.id)
       } else {

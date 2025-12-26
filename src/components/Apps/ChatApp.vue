@@ -5,6 +5,7 @@
       :contacts="contacts"
       :active-contact-id="activeContact?.id"
       :current-user="currentUser"
+      :is-loading="isLoadingContacts"
       @contact-selected="handleContactSelected"
       @settings-clicked="showSettings"
     />
@@ -46,6 +47,21 @@ import ChatMain from '@/components/Chat/ChatMain.vue'
 import UserInfoPanel from '@/components/Chat/UserInfoPanel.vue'
 import type { Contact } from '@/components/Chat/ChatSidebar.vue'
 import type { Message } from '@/components/Chat/ChatMain.vue'
+import api from '@/utils/api'
+
+// 后端会话数据类型
+interface ConversationData {
+  id: number
+  target_id: number
+  conv_type: number
+  name: string
+  head_image: string
+  last_msg_content: string
+  last_msg_time: string
+  unread_count: number
+  pinned: boolean
+  muted: boolean
+}
 
 // 当前用户信息
 const currentUser = ref({
@@ -56,62 +72,10 @@ const currentUser = ref({
 })
 
 // 联系人列表
-const contacts = reactive<Contact[]>([
-  {
-    id: '1',
-    name: 'Sarah Designer',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
-    status: 'online',
-    lastMessage: 'Inter 不错，但也许可以试试更现代一点的？',
-    lastMessageTime: Date.now() - 300000,
-    unreadCount: 0
-  },
-  {
-    id: '2',
-    name: '技术团队会议',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=team',
-    status: 'online',
-    lastMessage: '你好，会议室可以预约吗？',
-    lastMessageTime: Date.now() - 360000,
-    unreadCount: 5
-  },
-  {
-    id: '3',
-    name: 'Mike Product',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike',
-    status: 'away',
-    lastMessage: '昨天了，看 Notion，我们聊聊吧...',
-    lastMessageTime: Date.now() - 600000,
-    unreadCount: 1
-  },
-  {
-    id: '4',
-    name: 'David Backend',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=david',
-    status: 'offline',
-    lastMessage: '你好啊，我来晚了点...',
-    lastMessageTime: Date.now() - 86400000,
-    unreadCount: 0
-  },
-  {
-    id: '5',
-    name: '设计小组',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=design',
-    status: 'online',
-    lastMessage: '经验交流新想法！',
-    lastMessageTime: Date.now() - 3600000,
-    unreadCount: 0
-  },
-  {
-    id: '6',
-    name: 'Emily Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emily',
-    status: 'online',
-    lastMessage: '你有空一起看看吗？',
-    lastMessageTime: Date.now() - 3660000,
-    unreadCount: 3
-  }
-])
+const contacts = reactive<Contact[]>([])
+
+// 加载状态
+const isLoadingContacts = ref(false)
 
 // 所有消息数据（按联系人ID分组）
 const allMessages = reactive<Record<string, Message[]>>({
@@ -124,36 +88,11 @@ const allMessages = reactive<Record<string, Message[]>>({
       status: 'read'
     },
     {
-      id: '2',
-      text: '数据！我们试试 Rounded Mplus 吧。',
-      timestamp: Date.now() - 3300000,
-      isSent: false,
-      status: 'read'
-    },
-    {
       id: '3',
       text: '听起来不错。',
       timestamp: Date.now() - 1800000,
       isSent: true,
       status: 'read'
-    }
-  ],
-  '2': [
-    {
-      id: '4',
-      text: '你好，会议室可以预约吗？',
-      timestamp: Date.now() - 360000,
-      isSent: false,
-      status: 'delivered'
-    }
-  ],
-  '3': [
-    {
-      id: '5',
-      text: '昨天了，看 Notion，我们聊聊吧...',
-      timestamp: Date.now() - 600000,
-      isSent: false,
-      status: 'sent'
     }
   ]
 })
@@ -169,6 +108,55 @@ const currentMessages = computed(() => {
   if (!activeContact.value) return []
   return allMessages[activeContact.value.id] || []
 })
+
+// 转换后端数据为前端格式
+const convertConversationToContact = (conversation: ConversationData): Contact => {
+  return {
+    id: conversation.id.toString(),
+    name: conversation.name,
+    avatar: conversation.head_image,
+    status: 'online', // 后端没有在线状态，默认设为在线
+    lastMessage: conversation.last_msg_content,
+    lastMessageTime: new Date(conversation.last_msg_time).getTime(),
+    unreadCount: conversation.unread_count,
+    isMuted: conversation.muted,
+    isPinned: conversation.pinned
+  }
+}
+
+// 获取会话列表
+const fetchConversations = async () => {
+  if (isLoadingContacts.value) return
+  
+  isLoadingContacts.value = true
+  
+  try {
+    const response = await api.message.getConversationList()
+    if (response.data && response.code === 200) {
+      // 清空现有联系人
+      contacts.splice(0, contacts.length)
+      // 转换并添加新的联系人数据
+      const newContacts = response.data.map(convertConversationToContact)
+      contacts.push(...newContacts)
+      // 如果有联系人且没有选中的联系人，默认选中第一个
+      if (contacts.length > 0 && !activeContact.value) {
+        const firstContact = contacts[0]
+        if (firstContact) {
+          handleContactSelected(firstContact)
+        }
+      }
+    } else {
+      console.error('获取会话列表失败:', response.data?.msg || '未知错误')
+    }
+  } catch (error) {
+    console.error('获取会话列表出错:', error)
+    
+    // 如果请求失败，可以显示一些默认数据或错误提示
+    // 这里暂时保持空列表
+  } finally {
+    isLoadingContacts.value = false
+  }
+}
 
 // 处理联系人选择
 const handleContactSelected = (contact: Contact) => {
@@ -381,13 +369,8 @@ const handleDeleteContact = (contact: Contact) => {
 }
 
 onMounted(() => {
-  // 默认选中第一个联系人
-  if (contacts.length > 0) {
-    const firstContact = contacts[0]
-    if (firstContact) {
-      handleContactSelected(firstContact)
-    }
-  }
+  // 获取会话列表
+  fetchConversations()
 })
 </script>
 

@@ -34,6 +34,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('user', JSON.stringify(userData))
     localStorage.setItem('loginTime', loginTime.value.toString())
     localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('token', userData.accessToken)
+    localStorage.setItem('refreshToken', userData.refreshToken)
     
     console.log('用户登录成功:', userData)
   }

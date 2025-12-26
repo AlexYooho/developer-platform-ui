@@ -28,7 +28,16 @@ export const ssoApi = {
   }
 }
 
+// 消息模块相关接口
+export const messageApi = {
+  // 获取会话列表
+  getConversationList: () => {
+    return http.get('/message-module/api/conversation/list')
+  }
+}
+
 // 导出所有 API
 export default {
-  sso: ssoApi
+  sso: ssoApi,
+  message: messageApi
 }

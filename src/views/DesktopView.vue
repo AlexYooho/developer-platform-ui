@@ -2,20 +2,6 @@
   <div class="desktop-view">
     <!-- 桌面背景 -->
     <DesktopBackground :show-particles="true" :particle-count="60">
-      <!-- 桌面图标区域 -->
-      <div class="desktop-icons">
-        <div 
-          v-for="icon in desktopIcons" 
-          :key="icon.id"
-          class="desktop-icon"
-          @dblclick="handleIconDoubleClick(icon)"
-        >
-          <div class="icon-image">
-            <AppIcons :name="icon.iconName" :size="64" />
-          </div>
-          <div class="icon-label">{{ icon.name }}</div>
-        </div>
-      </div>
       
       <!-- 时间显示 -->
       <div class="desktop-time">
@@ -60,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, markRaw } from 'vue'
 import DesktopBackground from '@/components/Desktop/DesktopBackground.vue'
 import Dock from '@/components/Desktop/Dock.vue'
 import AppIcons from '@/components/icons/AppIcons.vue'
@@ -72,15 +58,6 @@ import PhotosApp from '@/components/Apps/PhotosApp.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useWindowsStore } from '@/stores/windows'
 
-interface DesktopIcon {
-  id: string
-  name: string
-  icon: string
-  iconName: string
-  x: number
-  y: number
-  type: 'folder' | 'file' | 'app'
-}
 
 interface App {
   id: string
@@ -99,40 +76,17 @@ const showLoginModal = ref(false)
 // 窗口管理
 const windowsStore = useWindowsStore()
 
+// 应用组件映射（使用markRaw避免响应式处理）
+const appComponents: Record<string, any> = {
+  chat: markRaw(ChatApp),
+  filemanager: markRaw(FileManagerApp),
+  photos: markRaw(PhotosApp)
+}
+
 // 当前时间
 const currentTime = ref('')
 const currentDate = ref('')
 
-// 桌面图标
-const desktopIcons = reactive<DesktopIcon[]>([
-  {
-    id: 'documents',
-    name: '文档',
-    icon: '',
-    iconName: 'folder',
-    x: 50,
-    y: 50,
-    type: 'folder'
-  },
-  {
-    id: 'downloads',
-    name: '下载',
-    icon: '',
-    iconName: 'folder',
-    x: 50,
-    y: 150,
-    type: 'folder'
-  },
-  {
-    id: 'pictures',
-    name: '图片',
-    icon: '',
-    iconName: 'folder',
-    x: 50,
-    y: 250,
-    type: 'folder'
-  }
-])
 
 // Dock应用
 const dockApps = reactive<App[]>([
@@ -182,22 +136,10 @@ const updateTime = () => {
   })
 }
 
-// 处理桌面图标双击
-const handleIconDoubleClick = (icon: DesktopIcon) => {
-  console.log(`双击了桌面图标: ${icon.name}`)
-  // 这里可以添加打开文件夹或应用的逻辑
-}
 
 // 处理Dock应用点击
 const handleAppClick = (app: App) => {
   console.log(`从Dock点击了应用: ${app.name}`)
-  
-  // 应用组件映射
-  const appComponents: Record<string, any> = {
-    chat: ChatApp,
-    filemanager: FileManagerApp,
-    photos: PhotosApp
-  }
   
   // 应用配置
   const appConfigs: Record<string, { title: string; width?: number; height?: number; icon?: string }> = {
@@ -297,51 +239,6 @@ onMounted(() => {
   user-select: none;
 }
 
-.desktop-icons {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  padding: 20px;
-  z-index: 1;
-}
-
-.desktop-icon {
-  position: absolute;
-  width: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.desktop-icon:hover {
-  transform: scale(1.05);
-}
-
-.icon-image {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 4px;
-}
-
-
-.icon-label {
-  color: white;
-  font-size: 12px;
-  text-align: center;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  backdrop-filter: blur(4px);
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .desktop-time {
   position: absolute;
@@ -461,19 +358,6 @@ onMounted(() => {
     font-size: 14px;
   }
   
-  .desktop-icon {
-    width: 70px;
-  }
-  
-  .icon-image {
-    width: 56px;
-    height: 56px;
-  }
-  
-  .icon-label {
-    font-size: 11px;
-    max-width: 70px;
-  }
   
   .user-info {
     top: 20px;
@@ -503,10 +387,6 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .desktop-icons {
-    padding: 15px;
-  }
-  
   .desktop-time {
     top: 15px;
     right: 15px;
@@ -520,14 +400,6 @@ onMounted(() => {
     font-size: 12px;
   }
   
-  .desktop-icon {
-    width: 60px;
-  }
-  
-  .icon-image {
-    width: 48px;
-    height: 48px;
-  }
   
   
   .user-info {

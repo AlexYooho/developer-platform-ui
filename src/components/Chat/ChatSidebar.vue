@@ -20,7 +20,21 @@
 
     <!-- 联系人列表 -->
     <div class="contacts-list">
+      <!-- 加载状态 -->
+      <div v-if="isLoading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载联系人...</div>
+      </div>
+      
+      <!-- 空状态 -->
+      <div v-else-if="!isLoading && filteredContacts.length === 0" class="empty-state">
+        <div class="empty-icon">💬</div>
+        <div class="empty-text">暂无联系人</div>
+      </div>
+      
+      <!-- 联系人列表 -->
       <div 
+        v-else
         v-for="contact in filteredContacts" 
         :key="contact.id"
         class="contact-item"
@@ -106,6 +120,7 @@ interface Props {
   contacts?: Contact[]
   activeContactId?: string
   currentUser?: CurrentUser
+  isLoading?: boolean
 }
 
 interface Emits {
@@ -116,6 +131,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   contacts: () => [],
   activeContactId: '',
+  isLoading: false,
   currentUser: () => ({
     id: 'me',
     name: '我',
@@ -147,42 +163,6 @@ const defaultContacts: Contact[] = [
     lastMessage: '你好，会议室可以预约吗？',
     lastMessageTime: Date.now() - 360000,
     unreadCount: 5
-  },
-  {
-    id: '3',
-    name: 'Mike Product',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike',
-    status: 'away',
-    lastMessage: '昨天了，看 Notion，我们聊聊吧...',
-    lastMessageTime: Date.now() - 600000,
-    unreadCount: 1
-  },
-  {
-    id: '4',
-    name: 'David Backend',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=david',
-    status: 'offline',
-    lastMessage: '你好啊，我来晚了点...',
-    lastMessageTime: Date.now() - 86400000,
-    unreadCount: 0
-  },
-  {
-    id: '5',
-    name: '设计小组',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=design',
-    status: 'online',
-    lastMessage: '经验交流新想法！',
-    lastMessageTime: Date.now() - 3600000,
-    unreadCount: 0
-  },
-  {
-    id: '6',
-    name: 'Emily Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emily',
-    status: 'online',
-    lastMessage: '你有空一起看看吗？',
-    lastMessageTime: Date.now() - 3660000,
-    unreadCount: 3
   }
 ]
 
@@ -506,6 +486,58 @@ onMounted(() => {
 
 .contacts-list::-webkit-scrollbar-thumb:hover {
   background: #adb5bd;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* 响应式设计 */

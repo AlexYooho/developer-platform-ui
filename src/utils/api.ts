@@ -33,6 +33,11 @@ export const messageApi = {
   // 获取会话列表
   getConversationList: () => {
     return http.get('/message-module/api/conversation/list')
+  },
+
+  // 获取会话消息
+  getMessages: (targetId: string | number) => {
+    return http.get(`/message-module/api/message/PRIVATE_MESSAGE/loadMessage/WEB/${targetId}`)
   }
 }
 

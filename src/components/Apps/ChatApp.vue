@@ -78,6 +78,25 @@ interface ConversationData {
   muted: boolean
 }
 
+// 后端消息数据类型
+interface MessageData {
+  id: number
+  send_id: number
+  receiver_id: number
+  group_id: number | null
+  conv_seq: number
+  message_content: string
+  message_content_type: number
+  message_status: number
+  read_status: number
+  send_nickname: string
+  send_time: string
+  reference_id: number
+  like_count: number
+  at_user_ids: string | null
+  un_read_count: number | null
+}
+
 // 当前用户信息
 const currentUser = ref({
   id: 'me',
@@ -110,7 +129,7 @@ const currentMessages = computed(() => {
 // 转换后端数据为前端格式
 const convertConversationToContact = (conversation: ConversationData): Contact => {
   return {
-    id: conversation.id.toString(),
+    id: conversation.target_id.toString(),
     name: conversation.name,
     avatar: conversation.head_image,
     status: 'online', // 后端没有在线状态，默认设为在线
@@ -119,6 +138,18 @@ const convertConversationToContact = (conversation: ConversationData): Contact =
     unreadCount: conversation.unread_count,
     isMuted: conversation.muted,
     isPinned: conversation.pinned
+  }
+}
+
+// 转换后端消息数据为前端Message格式
+const convertMessageToFrontend = (messageData: MessageData, currentUserId: number = 1): Message => {
+  return {
+    id: messageData.id.toString(),
+    text: messageData.message_content,
+    timestamp: new Date(messageData.send_time).getTime(),
+    isSent: messageData.send_id === currentUserId,
+    status: messageData.message_status === 0 ? 'sent' : 'failed',
+    type: messageData.message_content_type === 0 ? 'text' : 'file'
   }
 }
 
@@ -153,8 +184,38 @@ const fetchConversations = async () => {
   }
 }
 
+// 获取指定联系人的消息列表
+const fetchMessages = async (contactId: string) => {
+  try {
+    console.log('获取消息列表，联系人ID:', contactId)
+    const response = await api.message.getMessages(contactId)
+    console.log('消息列表响应:', response)
+    
+    if (response.data && response.code === 200) {
+      // 转换消息数据
+      const messages = response.data.map((msgData: MessageData) => convertMessageToFrontend(msgData))
+      
+      // 按时间排序（从旧到新）
+      messages.sort((a: Message, b: Message) => a.timestamp - b.timestamp)
+      
+      // 存储到对应联系人的消息列表中
+      allMessages[contactId] = messages
+      
+      console.log('转换后的消息:', messages)
+    } else {
+      console.error('获取消息列表失败:', response.data?.msg || '未知错误')
+      // 如果获取失败，设置为空数组
+      allMessages[contactId] = []
+    }
+  } catch (error) {
+    console.error('获取消息列表出错:', error)
+    // 如果请求失败，设置为空数组
+    allMessages[contactId] = []
+  }
+}
+
 // 处理联系人选择
-const handleContactSelected = (contact: Contact) => {
+const handleContactSelected = async (contact: Contact) => {
   activeContact.value = contact
   showUserInfo.value = true
   
@@ -163,6 +224,9 @@ const handleContactSelected = (contact: Contact) => {
   if (contactIndex !== -1) {
     contacts[contactIndex]!.unreadCount = 0
   }
+  
+  // 获取该联系人的消息列表
+  await fetchMessages(contact.id)
 }
 
 // 处理发送消息

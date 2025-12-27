@@ -13,14 +13,14 @@
     
     <!-- 用户基本信息 -->
     <div class="user-basic-info">
-      <div class="user-avatar-large">
-        <img :src="contact?.avatar" :alt="contact?.name" />
-        <div 
-          class="status-indicator" 
-          :class="contact?.status"
-          v-if="contact?.status === 'online'"
-        ></div>
-      </div>
+      <Avatar
+        :src="contact?.avatar || ''"
+        :alt="contact?.name || ''"
+        :status="contact?.status"
+        :show-status="true"
+        size="xl"
+        class="user-avatar-large"
+      />
       
       <div class="user-details">
         <h2 class="user-name">{{ contact?.name || '未知用户' }}</h2>
@@ -75,9 +75,12 @@
             class="group-item"
             @click="openGroup(group)"
           >
-            <div class="group-avatar">
-              <img :src="group.avatar" :alt="group.name" />
-            </div>
+            <Avatar
+              :src="group.avatar"
+              :alt="group.name"
+              size="md"
+              class="group-avatar"
+            />
             <div class="group-info">
               <div class="group-name">{{ group.name }}</div>
               <div class="group-members">{{ group.memberCount }} 人</div>
@@ -177,6 +180,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Contact } from './ChatSidebar.vue'
+import Avatar from '@/components/Common/Avatar.vue'
 
 interface SharedGroup {
   id: string

@@ -8,9 +8,13 @@
     }"
   >
     <!-- 接收消息的头像 -->
-    <div v-if="showAvatar && !message.isSent" class="message-avatar">
-      <img :src="contactAvatar" :alt="'联系人头像'" />
-    </div>
+    <Avatar
+      v-if="showAvatar && !message.isSent"
+      :src="contactAvatar"
+      alt="联系人头像"
+      size="sm"
+      class="message-avatar"
+    />
     
     <!-- 消息内容 -->
     <div class="message-content">
@@ -144,9 +148,13 @@
     </div>
     
     <!-- 发送消息的头像 -->
-    <div v-if="message.isSent" class="message-avatar">
-      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=me" alt="我的头像" />
-    </div>
+    <Avatar
+      v-if="message.isSent"
+      src="https://api.dicebear.com/7.x/avataaars/svg?seed=me"
+      alt="我的头像"
+      size="sm"
+      class="message-avatar"
+    />
   </div>
   
 </template>
@@ -154,6 +162,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { Message } from './ChatMain.vue'
+import Avatar from '@/components/Common/Avatar.vue'
 
 interface Props {
   message: Message

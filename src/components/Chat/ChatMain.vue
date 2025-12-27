@@ -3,14 +3,14 @@
     <!-- 聊天头部 -->
     <div class="chat-header">
       <div class="contact-info">
-        <div class="contact-avatar">
-          <img :src="activeContact?.avatar" :alt="activeContact?.name" />
-          <div 
-            class="status-indicator" 
-            :class="activeContact?.status"
-            v-if="activeContact?.status === 'online'"
-          ></div>
-        </div>
+        <Avatar
+          :src="activeContact?.avatar || ''"
+          :alt="activeContact?.name || ''"
+          :status="activeContact?.status"
+          :show-status="true"
+          size="md"
+          class="contact-avatar"
+        />
         <div class="contact-details">
           <div class="contact-name">{{ activeContact?.name || '选择联系人' }}</div>
           <div class="contact-status">{{ getStatusText(activeContact?.status) }}</div>
@@ -68,9 +68,12 @@
       
       <!-- 正在输入指示器 -->
       <div v-if="isTyping" class="typing-indicator">
-        <div class="typing-avatar">
-          <img :src="activeContact?.avatar" :alt="activeContact?.name" />
-        </div>
+        <Avatar
+          :src="activeContact?.avatar || ''"
+          :alt="activeContact?.name || ''"
+          size="sm"
+          class="typing-avatar"
+        />
         <div class="typing-content">
           <div class="typing-bubble">
             <div class="typing-dots">
@@ -119,6 +122,7 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import MessageItem from './MessageItem.vue'
 import ChatInput from './ChatInput.vue'
 import ContextMenu from '@/components/Common/ContextMenu.vue'
+import Avatar from '@/components/Common/Avatar.vue'
 import type { Contact } from './ChatSidebar.vue'
 import type { ContextMenuItem } from '@/components/Common/ContextMenu.vue'
 import { useContextMenu } from '@/composables/useContextMenu'

@@ -41,14 +41,13 @@
         :class="{ active: contact.id === activeContactId }"
         @click="selectContact(contact)"
       >
-        <div class="contact-avatar">
-          <img :src="contact.avatar" :alt="contact.name" />
-          <div 
-            class="status-indicator" 
-            :class="contact.status"
-            v-if="contact.status === 'online'"
-          ></div>
-        </div>
+        <Avatar
+          :src="contact.avatar"
+          :alt="contact.name"
+          :status="contact.status"
+          :show-status="true"
+          size="md"
+        />
         
         <div class="contact-info">
           <div class="contact-header">
@@ -96,6 +95,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import Avatar from '@/components/Common/Avatar.vue'
 
 export interface Contact {
   id: string

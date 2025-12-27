@@ -127,9 +127,7 @@ const convertConversationToContact = (conversation: ConversationData): Contact =
 // 获取会话列表
 const fetchConversations = async () => {
   if (isLoadingContacts.value) return
-  
   isLoadingContacts.value = true
-  
   try {
     const response = await api.message.getConversationList()
     if (response.data && response.code === 200) {
@@ -150,7 +148,6 @@ const fetchConversations = async () => {
     }
   } catch (error) {
     console.error('获取会话列表出错:', error)
-    
     // 如果请求失败，可以显示一些默认数据或错误提示
     // 这里暂时保持空列表
   } finally {

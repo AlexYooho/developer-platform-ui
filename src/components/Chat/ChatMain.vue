@@ -61,6 +61,7 @@
             :contact-avatar="activeContact?.avatar"
             @resend="handleResendMessage"
             @delete="handleDeleteMessage"
+            @context-menu="handleContextMenu"
           />
         </div>
       </div>
@@ -103,13 +104,24 @@
       <div class="empty-description">从左侧联系人列表中选择一个联系人开始对话</div>
     </div>
   </div>
+  
+  <!-- 全局右键菜单 -->
+  <ContextMenu
+    :visible="contextMenu.visible.value"
+    :position="contextMenu.position.value"
+    :menu-items="menuItems"
+    @close="contextMenu.hideMenu"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import MessageItem from './MessageItem.vue'
 import ChatInput from './ChatInput.vue'
+import ContextMenu from '@/components/Common/ContextMenu.vue'
 import type { Contact } from './ChatSidebar.vue'
+import type { ContextMenuItem } from '@/components/Common/ContextMenu.vue'
+import { useContextMenu } from '@/composables/useContextMenu'
 
 export interface Message {
   id: string
@@ -147,6 +159,57 @@ const emit = defineEmits<Emits>()
 const messagesContainer = ref<HTMLElement>()
 const isTyping = ref(false)
 const typingTimer = ref<number>()
+
+// 全局右键菜单
+const contextMenu = useContextMenu()
+const currentMessage = ref<Message | null>(null)
+
+// 右键菜单处理函数
+const handleContextMenu = (event: MouseEvent, message: Message) => {
+  currentMessage.value = message
+  contextMenu.showMenu(event)
+}
+
+// 菜单项配置
+const menuItems = computed<ContextMenuItem[]>(() => {
+  if (!currentMessage.value) return []
+  
+  return [
+    {
+      key: 'copy',
+      label: '复制',
+      iconPath: 'M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
+      action: () => copyMessage(currentMessage.value!)
+    },
+    ...(currentMessage.value.isSent ? [{
+      key: 'delete',
+      label: '删除',
+      iconPath: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+      action: () => handleDelete(currentMessage.value!)
+    }] : []),
+    {
+      key: 'reply',
+      label: '回复',
+      iconPath: 'M9 17l-4-5 4-5 M20 18v-2a4 4 0 0 0-4-4H4',
+      action: () => replyMessage(currentMessage.value!)
+    }
+  ]
+})
+
+// 消息操作函数
+const copyMessage = (message: Message) => {
+  navigator.clipboard.writeText(message.text)
+}
+
+const handleDelete = (message: Message) => {
+  // 这里可以添加删除确认逻辑
+  console.log('删除消息:', message.id)
+}
+
+const replyMessage = (message: Message) => {
+  // 这里可以添加回复逻辑
+  console.log('回复消息:', message.id)
+}
 
 // 默认消息数据
 const defaultMessages: Message[] = [
@@ -431,6 +494,7 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 0;
   background: #f8f9fa;
+  position: relative;
 }
 
 .messages-list {

@@ -149,39 +149,10 @@
     </div>
   </div>
   
-  <!-- 右键菜单 -->
-  <div 
-    v-if="showMenu" 
-    class="context-menu"
-    :style="{ top: menuPosition.y + 'px', left: menuPosition.x + 'px' }"
-    @click.stop
-  >
-    <div class="menu-item" @click="copyMessage">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-      </svg>
-      复制
-    </div>
-    <div v-if="message.isSent" class="menu-item" @click="handleDelete">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="3,6 5,6 21,6"/>
-        <path d="M19,6V20a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6M8,6V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"/>
-      </svg>
-      删除
-    </div>
-    <div class="menu-item" @click="replyMessage">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9,17 4,12 9,7"/>
-        <path d="M20,18v-2a4,4,0,0,0-4-4H4"/>
-      </svg>
-      回复
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import type { Message } from './ChatMain.vue'
 
 interface Props {
@@ -195,6 +166,7 @@ interface Emits {
   (e: 'delete', messageId: string): void
   (e: 'reply', message: Message): void
   (e: 'copy', text: string): void
+  (e: 'context-menu', event: MouseEvent, message: Message): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -204,8 +176,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-const showMenu = ref(false)
-const menuPosition = ref({ x: 0, y: 0 })
 
 // 格式化时间
 const formatTime = (timestamp: number) => {
@@ -228,31 +198,23 @@ const formatFileSize = (bytes?: number) => {
 
 // 显示右键菜单
 const showContextMenu = (event: MouseEvent) => {
-  event.preventDefault()
-  menuPosition.value = { x: event.clientX, y: event.clientY }
-  showMenu.value = true
+  emit('context-menu', event, props.message)
 }
 
-// 隐藏右键菜单
-const hideContextMenu = () => {
-  showMenu.value = false
-}
 
 // 处理消息点击
 const handleMessageClick = () => {
-  hideContextMenu()
+  // 可以在这里添加其他点击处理逻辑
 }
 
 // 处理重发
 const handleResend = () => {
   emit('resend', props.message.id)
-  hideContextMenu()
 }
 
 // 处理删除
 const handleDelete = () => {
   emit('delete', props.message.id)
-  hideContextMenu()
 }
 
 // 复制消息
@@ -263,13 +225,11 @@ const copyMessage = async () => {
   } catch (err) {
     console.error('复制失败:', err)
   }
-  hideContextMenu()
 }
 
 // 回复消息
 const replyMessage = () => {
   emit('reply', props.message)
-  hideContextMenu()
 }
 
 // 预览图片
@@ -291,13 +251,6 @@ const downloadFile = () => {
   }
 }
 
-onMounted(() => {
-  document.addEventListener('click', hideContextMenu)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', hideContextMenu)
-})
 </script>
 
 <style scoped>
@@ -556,37 +509,6 @@ onUnmounted(() => {
   height: 12px;
 }
 
-.context-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  min-width: 120px;
-  padding: 4px 0;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #495057;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.menu-item:hover {
-  background: #f8f9fa;
-}
-
-.menu-item svg {
-  width: 16px;
-  height: 16px;
-  color: #6c757d;
-}
 
 /* 动画 */
 @keyframes spin {

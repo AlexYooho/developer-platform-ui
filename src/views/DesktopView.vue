@@ -49,7 +49,6 @@
 import { ref, reactive, onMounted, onUnmounted, computed, markRaw } from 'vue'
 import DesktopBackground from '@/components/Desktop/DesktopBackground.vue'
 import Dock from '@/components/Desktop/Dock.vue'
-import AppIcons from '@/components/icons/AppIcons.vue'
 import AuthContainer from '@/components/Auth/AuthContainer.vue'
 import Window from '@/components/Desktop/Window.vue'
 import ChatApp from '@/components/Apps/ChatApp.vue'

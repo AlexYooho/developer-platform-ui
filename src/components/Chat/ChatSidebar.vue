@@ -145,26 +145,7 @@ const emit = defineEmits<Emits>()
 const searchQuery = ref('')
 
 // 默认联系人数据
-const defaultContacts: Contact[] = [
-  {
-    id: '1',
-    name: 'Sarah Designer',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
-    status: 'online',
-    lastMessage: '你好，新的设计方案已经完成了',
-    lastMessageTime: Date.now() - 300000,
-    unreadCount: 0
-  },
-  {
-    id: '2',
-    name: '技术团队会议',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=team',
-    status: 'online',
-    lastMessage: '你好，会议室可以预约吗？',
-    lastMessageTime: Date.now() - 360000,
-    unreadCount: 5
-  }
-]
+const defaultContacts: Contact[] = []
 
 // 使用传入的联系人或默认联系人
 const contacts = computed(() => props.contacts.length > 0 ? props.contacts : defaultContacts)

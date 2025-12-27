@@ -12,6 +12,7 @@
     
     <!-- 主聊天区域 -->
     <ChatMain
+      v-if="activeContact"
       :active-contact="activeContact"
       :messages="currentMessages"
       @send-message="handleSendMessage"
@@ -22,8 +23,22 @@
       @message-resend="handleMessageResend"
     />
     
+    <!-- 空状态 - 未选择联系人 -->
+    <div v-else class="chat-empty-state">
+      <div class="empty-content">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="empty-title">选择一个联系人开始聊天</div>
+        <div class="empty-description">从左侧联系人列表中选择一个联系人开始对话</div>
+      </div>
+    </div>
+    
     <!-- 用户信息面板 -->
     <UserInfoPanel
+      v-if="activeContact"
       :contact="activeContact"
       :is-visible="showUserInfo"
       @close="hideUserInfo"
@@ -78,24 +93,7 @@ const contacts = reactive<Contact[]>([])
 const isLoadingContacts = ref(false)
 
 // 所有消息数据（按联系人ID分组）
-const allMessages = reactive<Record<string, Message[]>>({
-  '1': [
-    {
-      id: '1',
-      text: 'Inter 不错，但也许可以试试更现代一点的？',
-      timestamp: Date.now() - 3600000,
-      isSent: false,
-      status: 'read'
-    },
-    {
-      id: '3',
-      text: '听起来不错。',
-      timestamp: Date.now() - 1800000,
-      isSent: true,
-      status: 'read'
-    }
-  ]
-})
+const allMessages = reactive<Record<string, Message[]>>({})
 
 // 当前选中的联系人
 const activeContact = ref<Contact | null>(null)
@@ -140,7 +138,7 @@ const fetchConversations = async () => {
       if (contacts.length > 0 && !activeContact.value) {
         const firstContact = contacts[0]
         if (firstContact) {
-          handleContactSelected(firstContact)
+          // handleContactSelected(firstContact)
         }
       }
     } else {
@@ -377,6 +375,52 @@ onMounted(() => {
   display: flex;
   background: #f8f9fa;
   overflow: hidden;
+}
+
+/* 空状态样式 */
+.chat-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-right: 1px solid #e9ecef;
+}
+
+.empty-content {
+  text-align: center;
+  max-width: 400px;
+  padding: 40px 20px;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 50%;
+  color: #adb5bd;
+}
+
+.empty-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  font-size: 14px;
+  color: #6c757d;
+  line-height: 1.5;
 }
 
 /* 响应式设计 */

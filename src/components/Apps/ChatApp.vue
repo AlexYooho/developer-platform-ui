@@ -187,10 +187,7 @@ const fetchConversations = async () => {
 // 获取指定联系人的消息列表
 const fetchMessages = async (contactId: string) => {
   try {
-    console.log('获取消息列表，联系人ID:', contactId)
     const response = await api.message.getMessages(contactId)
-    console.log('消息列表响应:', response)
-    
     if (response.data && response.code === 200) {
       // 转换消息数据
       const messages = response.data.map((msgData: MessageData) => convertMessageToFrontend(msgData))
@@ -200,8 +197,6 @@ const fetchMessages = async (contactId: string) => {
       
       // 存储到对应联系人的消息列表中
       allMessages[contactId] = messages
-      
-      console.log('转换后的消息:', messages)
     } else {
       console.error('获取消息列表失败:', response.data?.msg || '未知错误')
       // 如果获取失败，设置为空数组

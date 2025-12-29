@@ -14,8 +14,8 @@
     <!-- 用户基本信息 -->
     <div class="user-basic-info">
       <Avatar
-        :src="contact?.avatar || ''"
-        :alt="contact?.name || ''"
+        :src="friendDetailInfo.avatar || ''"
+        :alt="friendDetailInfo.nick_name || ''"
         :status="contact?.status"
         :show-status="true"
         size="xl"
@@ -23,9 +23,11 @@
       />
       
       <div class="user-details">
-        <h2 class="user-name">{{ contact?.name || '未知用户' }}</h2>
+        <h2 class="user-name">{{ friendDetailInfo?.nick_name || '未知用户' }}</h2>
         <p class="user-status">{{ getStatusText(contact?.status) }}</p>
-        <p class="user-id">ID: {{ contact?.id }}</p>
+        <p class="user-id">别名: {{ friendDetailInfo?.alias }}</p>
+        <p class="user-id">来源: {{ friendDetailInfo?.add_source }}</p>
+        <p class="user-id">区域: {{ friendDetailInfo?.area }}</p>
       </div>
     </div>
     
@@ -134,7 +136,6 @@ interface FriendDetailInfo {
   nick_name: string
   head_image: string
   area: string
-  same_group_info: SameGroupInfo[]
 }
 
 interface SameGroupInfo {
@@ -167,6 +168,25 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+
+// 好友基本信息
+const friendDetailInfo = ref<{
+  id: string
+  alias: string         
+  add_source: string     
+  account: string       
+  nick_name: string     
+  avatar: string        
+  area: string
+}>({
+  id: '',
+  alias: '',
+  add_source: '',
+  account: '',
+  nick_name: '',
+  avatar: '',
+  area: ''
+});
 
 // 模拟共同群组数据
 const sharedGroups = ref<SharedGroup[]>([])
@@ -235,8 +255,7 @@ const convertFriendDetailInfoToFrontend = (friendInfo: FriendDetailInfo) => {
     account: friendInfo.account,
     nick_name: friendInfo.nick_name,
     avatar: friendInfo.head_image,
-    area: friendInfo.area,
-    same_group_info: friendInfo.same_group_info
+    area: friendInfo.area
   }
 }
 
@@ -245,8 +264,9 @@ const fetchFriendDetailInfo = async () => {
   if(response.code === 200 && response.data) {
     // 转换好友信息
     var friendInfo = convertFriendDetailInfoToFrontend(response.data)
+    friendDetailInfo.value = friendInfo
     // 转换相同群组信息
-    const groupInfos = friendInfo.same_group_info.map(convertSameGroupInfoToFrontend);
+    const groupInfos = response.data.same_group_info.map(convertSameGroupInfoToFrontend);
     sharedGroups.value = groupInfos
   }
 }

@@ -114,9 +114,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import type { Contact } from './ChatSidebar.vue'
 import Avatar from '@/components/Common/Avatar.vue'
+import api from '@/utils/api'
 
 interface SharedGroup {
   id: string
@@ -125,12 +126,22 @@ interface SharedGroup {
   memberCount: number
 }
 
-interface SharedFile {
+interface FriendDetailInfo {
   id: string
-  name: string
-  type: 'image' | 'document' | 'video' | 'audio'
-  size: number
-  date: number
+  alias: string
+  add_source: string
+  account: string
+  nick_name: string
+  head_image: string
+  area: string
+  same_group_info: SameGroupInfo[]
+}
+
+interface SameGroupInfo {
+  group_id: number
+  group_name: string
+  group_avatar: string
+  group_member_count: number
 }
 
 interface Props {
@@ -144,7 +155,6 @@ interface Emits {
   (e: 'voice-call', contact: Contact): void
   (e: 'video-call', contact: Contact): void
   (e: 'open-group', group: SharedGroup): void
-  (e: 'open-file', file: SharedFile): void
   (e: 'mute-contact', contact: Contact): void
   (e: 'pin-contact', contact: Contact): void
   (e: 'block-contact', contact: Contact): void
@@ -159,51 +169,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 // 模拟共同群组数据
-const sharedGroups = ref<SharedGroup[]>([
-  {
-    id: '1',
-    name: '技术团队会议',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=team1',
-    memberCount: 12
-  },
-  {
-    id: '2',
-    name: '设计小组',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=design',
-    memberCount: 8
-  },
-  {
-    id: '3',
-    name: '项目讨论组',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=project',
-    memberCount: 15
-  }
-])
-
-// 模拟共享文件数据
-const sharedFiles = ref<SharedFile[]>([
-  {
-    id: '1',
-    name: '设计方案.pdf',
-    type: 'document',
-    size: 2048000,
-    date: Date.now() - 86400000
-  },
-  {
-    id: '2',
-    name: '项目截图.png',
-    type: 'image',
-    size: 1024000,
-    date: Date.now() - 172800000
-  },
-  {
-    id: '3',
-    name: '会议录音.mp3',
-    type: 'audio',
-    size: 5120000,
-    date: Date.now() - 259200000
-  }
-])
+const sharedGroups = ref<SharedGroup[]>([])
 
 // 获取状态文本
 const getStatusText = (status?: string) => {
@@ -219,62 +185,14 @@ const getStatusText = (status?: string) => {
   }
 }
 
-// 格式化文件大小
-const formatFileSize = (bytes: number) => {
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
-}
-
-// 格式化日期
-const formatDate = (timestamp: number) => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - timestamp
-  
-  if (diff < 86400000) {
-    return '今天'
-  } else if (diff < 172800000) {
-    return '昨天'
-  } else {
-    return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
-  }
-}
-
 // 关闭面板
 const closePanel = () => {
   emit('close')
 }
 
-// 开始聊天
-const startChat = () => {
-  if (props.contact) {
-    emit('start-chat', props.contact)
-  }
-}
-
-// 开始语音通话
-const startVoiceCall = () => {
-  if (props.contact) {
-    emit('voice-call', props.contact)
-  }
-}
-
-// 开始视频通话
-const startVideoCall = () => {
-  if (props.contact) {
-    emit('video-call', props.contact)
-  }
-}
-
 // 打开群组
 const openGroup = (group: SharedGroup) => {
   emit('open-group', group)
-}
-
-// 打开文件
-const openFile = (file: SharedFile) => {
-  emit('open-file', file)
 }
 
 // 静音联系人
@@ -308,6 +226,45 @@ const deleteContact = () => {
     }
   }
 }
+
+const convertFriendDetailInfoToFrontend = (friendInfo: FriendDetailInfo) => {
+  return {
+    id: friendInfo.id,
+    alias: friendInfo.alias,
+    add_source: friendInfo.add_source,
+    account: friendInfo.account,
+    nick_name: friendInfo.nick_name,
+    avatar: friendInfo.head_image,
+    area: friendInfo.area,
+    same_group_info: friendInfo.same_group_info
+  }
+}
+
+const fetchFriendDetailInfo = async () => {
+  const response = await api.friend.getFriendDetailInfo(props.contact!.id)
+  if(response.code === 200 && response.data) {
+    // 转换好友信息
+    var friendInfo = convertFriendDetailInfoToFrontend(response.data)
+    // 转换相同群组信息
+    const groupInfos = friendInfo.same_group_info.map(convertSameGroupInfoToFrontend);
+    sharedGroups.value = groupInfos
+  }
+}
+
+// 相同群组信息转换为前端格式
+const convertSameGroupInfoToFrontend = (sameGroupInfo: SameGroupInfo): SharedGroup => {
+  return {
+      id: sameGroupInfo.group_id.toString(),
+      name: sameGroupInfo.group_name,
+      avatar: sameGroupInfo.group_avatar,
+      memberCount: sameGroupInfo.group_member_count
+    }
+}
+
+onMounted(() => {
+  // 获取好友详情
+  fetchFriendDetailInfo()
+})
 </script>
 
 <style scoped>

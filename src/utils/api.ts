@@ -41,8 +41,16 @@ export const messageApi = {
   }
 }
 
+// 好友模块相关接口
+export const friendApi = {
+  getFriendDetailInfo: (friendId: string | number) => {
+    return http.get(`/friend-module/api/friend/${friendId}`)
+  }
+}
+
 // 导出所有 API
 export default {
   sso: ssoApi,
-  message: messageApi
+  message: messageApi,
+  friend: friendApi
 }

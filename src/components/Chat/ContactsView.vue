@@ -2,7 +2,7 @@
   <div class="contacts-view">
     <!-- 左侧联系人列表1 -->
     <div class="contacts-left">
-      <!-- 搜索栏 -->
+      <!-- 搜索栏1 -->
       <div class="search-header">
         <div class="search-box">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

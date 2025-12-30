@@ -1,6 +1,6 @@
 <template>
   <div class="contacts-view">
-    <!-- 左侧联系人列表 -->
+    <!-- 左侧联系人列表1 -->
     <div class="contacts-left">
       <!-- 搜索栏 -->
       <div class="search-header">

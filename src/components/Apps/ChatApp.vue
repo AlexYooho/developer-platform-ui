@@ -1,65 +1,91 @@
 <template>
   <div class="chat-app">
-    <!-- 侧边栏 -->
-    <ChatSidebar
-      :contacts="contacts"
-      :active-contact-id="activeContact?.id"
-      :current-user="currentUser"
-      :is-loading="isLoadingContacts"
-      @contact-selected="handleContactSelected"
-      @settings-clicked="showSettings"
+    <!-- 左侧导航栏 -->
+    <ChatNavbar 
+      :active-tab="activeTab"
+      @tab-change="handleTabChange"
     />
     
-    <!-- 主聊天区域 -->
-    <ChatMain
-      v-if="activeContact"
-      :active-contact="activeContact"
-      :messages="currentMessages"
-      @send-message="handleSendMessage"
-      @voice-call="handleVoiceCall"
-      @video-call="handleVideoCall"
-      @file-upload="handleFileUpload"
-      @message-delete="handleMessageDelete"
-      @message-resend="handleMessageResend"
-    />
-    
-    <!-- 空状态 - 未选择联系人 -->
-    <div v-else class="chat-empty-state">
-      <div class="empty-content">
-        <div class="empty-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
+    <!-- 消息模块 -->
+    <div v-if="activeTab === 'messages'" class="chat-content">
+      <!-- 侧边栏 -->
+      <ChatSidebar
+        :contacts="contacts"
+        :active-contact-id="activeContact?.id"
+        :current-user="currentUser"
+        :is-loading="isLoadingContacts"
+        @contact-selected="handleContactSelected"
+        @settings-clicked="showSettings"
+      />
+      
+      <!-- 主聊天区域或空状态 -->
+      <ChatMain
+        v-if="activeContact"
+        :active-contact="activeContact"
+        :messages="currentMessages"
+        @send-message="handleSendMessage"
+        @voice-call="handleVoiceCall"
+        @video-call="handleVideoCall"
+        @file-upload="handleFileUpload"
+        @message-delete="handleMessageDelete"
+        @message-resend="handleMessageResend"
+        @context-menu="handleContextMenu"
+      />
+      <!-- 空状态 - 未选择联系人时显示 -->
+      <div v-else class="chat-empty-state">
+        <div class="empty-content">
+          <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <div class="empty-title">选择一个联系人开始聊天</div>
+          <div class="empty-description">从左侧联系人列表中选择一个联系人开始对话</div>
         </div>
-        <div class="empty-title">选择一个联系人开始聊天</div>
-        <div class="empty-description">从左侧联系人列表中选择一个联系人开始对话</div>
       </div>
+      
+      <!-- 用户信息面板 - 只在选中联系人时显示 -->
+      <UserInfoPanel
+        v-if="activeContact"
+        :contact="activeContact"
+        :is-visible="showUserInfo"
+        @close="hideUserInfo"
+        @start-chat="handleStartChat"
+        @voice-call="handleVoiceCall"
+        @video-call="handleVideoCall"
+        @open-group="handleOpenGroup"
+        @open-file="handleOpenFile"
+        @mute-contact="handleMuteContact"
+        @pin-contact="handlePinContact"
+        @block-contact="handleBlockContact"
+        @delete-contact="handleDeleteContact"
+      />
     </div>
     
-    <!-- 用户信息面板 -->
-    <UserInfoPanel
-      v-if="activeContact"
-      :contact="activeContact"
-      :is-visible="showUserInfo"
-      @close="hideUserInfo"
-      @start-chat="handleStartChat"
-      @voice-call="handleVoiceCall"
-      @video-call="handleVideoCall"
-      @open-group="handleOpenGroup"
-      @open-file="handleOpenFile"
-      @mute-contact="handleMuteContact"
-      @pin-contact="handlePinContact"
-      @block-contact="handleBlockContact"
-      @delete-contact="handleDeleteContact"
+    <!-- 通讯录模块 -->
+    <ContactsView 
+      v-else-if="activeTab === 'contacts'"
+      @contact-selected="handleContactsViewContactSelected"
+      @start-chat="handleContactsViewStartChat"
     />
+    
+    <!-- 朋友圈模块 -->
+    <MomentsView v-else-if="activeTab === 'moments'" />
+    
+    <!-- 钱包模块 -->
+    <WalletView v-else-if="activeTab === 'wallet'" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import ChatNavbar from '@/components/Chat/ChatNavbar.vue'
 import ChatSidebar from '@/components/Chat/ChatSidebar.vue'
 import ChatMain from '@/components/Chat/ChatMain.vue'
 import UserInfoPanel from '@/components/Chat/UserInfoPanel.vue'
+import ContactsView from '@/components/Chat/ContactsView.vue'
+import MomentsView from '@/components/Chat/MomentsView.vue'
+import WalletView from '@/components/Chat/WalletView.vue'
 import type { Contact } from '@/components/Chat/ChatSidebar.vue'
 import type { Message } from '@/components/Chat/ChatMain.vue'
 import api from '@/utils/api'
@@ -96,6 +122,9 @@ interface MessageData {
   at_user_ids: string | null
   un_read_count: number | null
 }
+
+// 当前激活的标签页
+const activeTab = ref('messages')
 
 // 当前用户信息
 const currentUser = ref({
@@ -369,6 +398,12 @@ const showSettings = () => {
   console.log('显示设置')
 }
 
+// 处理右键菜单
+const handleContextMenu = (event: MouseEvent, message: Message) => {
+  console.log('右键菜单', event, message)
+  // 这里可以添加右键菜单的处理逻辑
+}
+
 
 // 隐藏用户信息面板
 const hideUserInfo = () => {
@@ -422,6 +457,48 @@ const handleDeleteContact = (contact: Contact) => {
   }
 }
 
+// 处理标签页切换
+const handleTabChange = (tabId: string) => {
+  activeTab.value = tabId
+  
+  // 切换到消息标签时，如果没有选中联系人，清空右侧面板
+  if (tabId === 'messages' && !activeContact.value) {
+    showUserInfo.value = false
+  }
+}
+
+// 处理通讯录视图中的联系人选择
+const handleContactsViewContactSelected = (contact: any) => {
+  console.log('通讯录中选择了联系人:', contact)
+  // 这里可以显示联系人详情或其他操作
+}
+
+// 处理通讯录视图中的开始聊天
+const handleContactsViewStartChat = (contact: any) => {
+  // 切换到消息标签
+  activeTab.value = 'messages'
+  
+  // 查找是否已存在该联系人的会话
+  const existingContact = contacts.find(c => c.id === contact.id)
+  if (existingContact) {
+    // 如果存在，直接选中
+    handleContactSelected(existingContact)
+  } else {
+    // 如果不存在，添加到联系人列表并选中
+    const newContact: Contact = {
+      id: contact.id,
+      name: contact.name,
+      avatar: contact.avatar,
+      status: contact.status || 'online',
+      lastMessage: '',
+      lastMessageTime: Date.now(),
+      unreadCount: 0
+    }
+    contacts.push(newContact)
+    handleContactSelected(newContact)
+  }
+}
+
 onMounted(() => {
   // 获取会话列表
   fetchConversations()
@@ -433,6 +510,12 @@ onMounted(() => {
   height: 100%;
   display: flex;
   background: #f8f9fa;
+  overflow: hidden;
+}
+
+.chat-content {
+  flex: 1;
+  display: flex;
   overflow: hidden;
 }
 

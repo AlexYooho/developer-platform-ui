@@ -163,18 +163,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Avatar from '@/components/Common/Avatar.vue'
 import ContactDetailPanel from '@/components/Chat/ContactDetailPanel.vue'
-import type { Contact as ChatContact } from '@/components/Chat/ChatSidebar.vue'
+import api from '@/utils/api'
 
-interface Contact {
+// 前端联系人列表数据类型
+export interface ContactInfo {
   id: string
   name: string
   avatar: string
-  status: 'online' | 'away' | 'offline'
-  phone?: string
+  status: 'online' | 'away' | 'offline',
+  area: string
+  alias: string
+  personal_signature: string
+  add_source: string
+  account: string
   email?: string
+}
+
+// 后端好友列表数据类型
+interface FriendInfo {
+  id: string
+  alias: string
+  tag_name: string
+  status: number
+  add_source: number
+  account: string
+  nick_name: string
+  head_image: string
+  area: string
+  user_name: string
+  sex: number
 }
 
 interface FriendRequest {
@@ -186,8 +206,8 @@ interface FriendRequest {
 }
 
 interface Emits {
-  (e: 'contact-selected', contact: Contact): void
-  (e: 'start-chat', contact: Contact): void
+  (e: 'contact-selected', contact: ContactInfo): void
+  (e: 'start-chat', contact: ContactInfo): void
 }
 
 const emit = defineEmits<Emits>()
@@ -196,48 +216,34 @@ const emit = defineEmits<Emits>()
 const searchQuery = ref('')
 
 // 选中的联系人
-const selectedContact = ref<ChatContact | null>(null)
+const selectedContact = ref<ContactInfo | null>(null)
 
-// 转换联系人格式
-const convertToChartContact = (contact: Contact): ChatContact => {
+
+// 转换好友信息格式
+const convertToFriendInfo = (friend: FriendInfo): ContactInfo => {
   return {
-    id: contact.id,
-    name: contact.name,
-    avatar: contact.avatar,
-    status: contact.status,
-    lastMessage: '',
-    lastMessageTime: Date.now(),
-    unreadCount: 0
+    id: friend.id,
+    name: friend.nick_name,
+    avatar: friend.head_image,
+    status: 'online',
+    account: friend.account,
+    area: friend.area,
+    alias: friend.alias,
+    personal_signature: "",
+    add_source: friend.add_source.toString()
+  }
+}
+
+// 获取好友列表
+const getFriendList = async () => {
+  const response = await api.friend.getFriendList()
+  if (response.data && response.code === 200) {
+    contacts.value = response.data.map(convertToFriendInfo)
   }
 }
 
 // 联系人列表
-const contacts = ref<Contact[]>([
-  {
-    id: '1',
-    name: '张三',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhang',
-    status: 'online',
-    phone: '13800138001',
-    email: 'zhang@example.com'
-  },
-  {
-    id: '2',
-    name: '李四',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=li',
-    status: 'away',
-    phone: '13800138002',
-    email: 'li@example.com'
-  },
-  {
-    id: '3',
-    name: '王五',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=wang',
-    status: 'offline',
-    phone: '13800138003',
-    email: 'wang@example.com'
-  }
-])
+const contacts = ref<ContactInfo[]>([])
 
 // 好友申请列表
 const friendRequests = ref<FriendRequest[]>([
@@ -262,7 +268,7 @@ const filteredContacts = computed(() => {
   }
   return contacts.value.filter(contact => 
     contact.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    contact.phone?.includes(searchQuery.value) ||
+    contact.account?.includes(searchQuery.value) ||
     contact.email?.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
 })
@@ -282,13 +288,13 @@ const getStatusText = (status: string) => {
 }
 
 // 处理联系人点击
-const handleContactClick = (contact: Contact) => {
-  selectedContact.value = convertToChartContact(contact)
+const handleContactClick = (contact: ContactInfo) => {
+  selectedContact.value = contact
   emit('contact-selected', contact)
 }
 
 // 开始聊天
-const startChat = (contact: Contact) => {
+const startChat = (contact: ContactInfo) => {
   emit('start-chat', contact)
 }
 
@@ -324,7 +330,12 @@ const acceptFriendRequest = (requestId: string) => {
         id: request.id,
         name: request.name,
         avatar: request.avatar,
-        status: 'online'
+        status: 'online',
+        area: '',
+        alias: '',
+        personal_signature: '',
+        add_source: '',
+        account: ''
       })
       
       // 从申请列表中移除
@@ -348,7 +359,7 @@ const rejectFriendRequest = (requestId: string) => {
 }
 
 // UserInfoPanel 事件处理方法
-const handleStartChat = (contact: ChatContact) => {
+const handleStartChat = (contact: ContactInfo) => {
   // 找到原始联系人并触发开始聊天
   const originalContact = contacts.value.find(c => c.id === contact.id)
   if (originalContact) {
@@ -356,11 +367,11 @@ const handleStartChat = (contact: ChatContact) => {
   }
 }
 
-const handleVoiceCall = (contact: ChatContact) => {
+const handleVoiceCall = (contact: ContactInfo) => {
   console.log('语音通话:', contact.name)
 }
 
-const handleVideoCall = (contact: ChatContact) => {
+const handleVideoCall = (contact: ContactInfo) => {
   console.log('视频通话:', contact.name)
 }
 
@@ -368,21 +379,26 @@ const handleOpenGroup = (group: any) => {
   console.log('打开群组:', group)
 }
 
-const handleMuteContact = (contact: ChatContact) => {
+const handleMuteContact = (contact: ContactInfo) => {
   console.log('静音联系人:', contact.name)
 }
 
-const handlePinContact = (contact: ChatContact) => {
+const handlePinContact = (contact: ContactInfo) => {
   console.log('置顶联系人:', contact.name)
 }
 
-const handleBlockContact = (contact: ChatContact) => {
+const handleBlockContact = (contact: ContactInfo) => {
   console.log('屏蔽联系人:', contact.name)
 }
 
-const handleDeleteContact = (contact: ChatContact) => {
+const handleDeleteContact = (contact: ContactInfo) => {
   console.log('删除联系人:', contact.name)
 }
+
+onMounted(() => {
+  // 获取好友列表
+  getFriendList()
+})
 </script>
 
 <style scoped>

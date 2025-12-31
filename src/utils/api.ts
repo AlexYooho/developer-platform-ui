@@ -43,8 +43,13 @@ export const messageApi = {
 
 // 好友模块相关接口
 export const friendApi = {
+  // 获取好友详情
   getFriendDetailInfo: (friendId: string | number) => {
     return http.get(`/friend-module/api/friend/${friendId}`)
+  },
+  // 获取好友列表
+  getFriendList: () => {
+    return http.get('/friend-module/api/friend/list')
   }
 }
 

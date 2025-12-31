@@ -15,8 +15,8 @@
         <h2 class="user-name">{{ contact?.name || '未知用户' }}</h2>
         <div class="user-details">
           <p class="user-status">{{ getStatusText(contact?.status) }}</p>
-          <p class="user-wechat">微信号：{{ contact?.id || 'w761758634' }}</p>
-          <p class="user-region">地区：广东 深圳</p>
+          <p class="user-wechat">账号：{{ contact?.account || 'w761758634' }}</p>
+          <p class="user-region">地区：{{ contact?.area || '未知地区' }}</p>
         </div>
       </div>
       
@@ -41,7 +41,7 @@
     <!-- 备注和标签 -->
     <div class="info-row">
       <span class="info-label">备注</span>
-      <span class="info-value">{{ contact?.name }}</span>
+      <span class="info-value">{{ contact?.alias }}</span>
     </div>
     
     <!-- 朋友圈 -->
@@ -64,13 +64,13 @@
     <!-- 个性签名 -->
     <div class="info-row">
       <span class="info-label">个性签名</span>
-      <span class="info-value">{{ personalSignature || '今天的努力是为了遇到明天更好的自己' }}</span>
+      <span class="info-value">{{ contact?.personal_signature || '今天的努力是为了遇到明天更好的自己' }}</span>
     </div>
     
     <!-- 来源 -->
     <div class="info-row">
       <span class="info-label">来源</span>
-      <span class="info-value">{{ contactSource || '通过二维码添加' }}</span>
+      <span class="info-value">{{ contact?.add_source || '通过二维码添加' }}</span>
     </div>
     
     <!-- 操作按钮 -->
@@ -129,7 +129,7 @@
 <script setup lang="ts">
 import { ref, reactive, nextTick } from 'vue'
 import Avatar from '@/components/Common/Avatar.vue'
-import type { Contact } from '@/components/Chat/ChatSidebar.vue'
+import type { ContactInfo } from '@/components/Chat/ContactsView.vue'
 
 interface SharedGroup {
   id: string
@@ -139,18 +139,18 @@ interface SharedGroup {
 }
 
 interface Props {
-  contact?: Contact | null
+  contact?: ContactInfo | null
 }
 
 interface Emits {
-  (e: 'start-chat', contact: Contact): void
-  (e: 'voice-call', contact: Contact): void
-  (e: 'video-call', contact: Contact): void
+  (e: 'start-chat', contact: ContactInfo): void
+  (e: 'voice-call', contact: ContactInfo): void
+  (e: 'video-call', contact: ContactInfo): void
   (e: 'open-group', group: SharedGroup): void
-  (e: 'mute-contact', contact: Contact): void
-  (e: 'pin-contact', contact: Contact): void
-  (e: 'block-contact', contact: Contact): void
-  (e: 'delete-contact', contact: Contact): void
+  (e: 'mute-contact', contact: ContactInfo): void
+  (e: 'pin-contact', contact: ContactInfo): void
+  (e: 'block-contact', contact: ContactInfo): void
+  (e: 'delete-contact', contact: ContactInfo): void
 }
 
 const props = withDefaults(defineProps<Props>(), {

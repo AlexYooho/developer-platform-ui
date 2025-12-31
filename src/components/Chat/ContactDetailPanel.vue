@@ -124,11 +124,28 @@
       </div>
     </div>
   </Teleport>
+  
+  <!-- 模态框 -->
+  <Modal
+    v-model:visible="modalState.visible"
+    :type="modalState.type"
+    :title="modalState.title"
+    :message="modalState.message"
+    :confirm-text="modalState.confirmText"
+    :cancel-text="modalState.cancelText"
+    :show-cancel="modalState.showCancel"
+    :show-buttons="modalState.showButtons"
+    :close-on-overlay="modalState.closeOnOverlay"
+    @confirm="handleConfirm"
+    @cancel="handleCancel"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, nextTick } from 'vue'
+import { ref, reactive, nextTick, Teleport } from 'vue'
 import Avatar from '@/components/Common/Avatar.vue'
+import Modal from '@/components/Common/Modal.vue'
+import { useModal } from '@/composables/useModal'
 import type { ContactInfo } from '@/components/Chat/ContactsView.vue'
 
 interface SharedGroup {
@@ -182,6 +199,9 @@ const personalSignature = ref('今天的努力是为了遇到明天更好的自�
 
 // 联系人来源
 const contactSource = ref('通过二维码添加')
+
+// 模态框
+const { modalState, handleConfirm, handleCancel, confirm } = useModal()
 
 // 获取状态文本
 const getStatusText = (status?: string) => {
@@ -319,10 +339,11 @@ const handleAddToBlacklist = () => {
 }
 
 // 删除联系人
-const deleteContact = () => {
+const deleteContact = async () => {
   hideContextMenu()
   if (props.contact) {
-    if (confirm(`确定要删除 ${props.contact.name} 吗？此操作无法撤销。`)) {
+    const result = await confirm(`确认删除该好友?`)
+    if (result) {
       emit('delete-contact', props.contact)
     }
   }

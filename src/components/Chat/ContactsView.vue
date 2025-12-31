@@ -160,6 +160,21 @@
       </div>
     </div>
   </div>
+
+   <!-- 模态框 -->
+   <Modal
+    v-model:visible="modalState.visible"
+    :type="modalState.type"
+    :title="modalState.title"
+    :message="modalState.message"
+    :confirm-text="modalState.confirmText"
+    :cancel-text="modalState.cancelText"
+    :show-cancel="modalState.showCancel"
+    :show-buttons="modalState.showButtons"
+    :close-on-overlay="modalState.closeOnOverlay"
+    @confirm="handleConfirm"
+    @cancel="handleCancel"
+  />
 </template>
 
 <script setup lang="ts">
@@ -167,6 +182,8 @@ import { ref, computed, onMounted } from 'vue'
 import Avatar from '@/components/Common/Avatar.vue'
 import ContactDetailPanel from '@/components/Chat/ContactDetailPanel.vue'
 import api from '@/utils/api'
+import Modal from '@/components/Common/Modal.vue'
+import { useModal } from '@/composables/useModal'
 
 // 前端联系人列表数据类型
 export interface ContactInfo {
@@ -209,6 +226,9 @@ interface Emits {
   (e: 'contact-selected', contact: ContactInfo): void
   (e: 'start-chat', contact: ContactInfo): void
 }
+
+// 模态框
+const { modalState, handleConfirm, handleCancel, alert } = useModal()
 
 const emit = defineEmits<Emits>()
 

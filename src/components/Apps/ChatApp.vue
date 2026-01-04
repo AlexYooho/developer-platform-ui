@@ -243,6 +243,10 @@ const fetchMessages = async (contactId: string) => {
 
 // 处理联系人选择
 const handleContactSelected = async (contact: Contact) => {
+  // 先获取该联系人的消息列表
+  await fetchMessages(contact.id)
+  
+  // 然后设置活跃联系人（这样消息已经准备好了）
   activeContact.value = contact
   showUserInfo.value = true
   
@@ -251,9 +255,6 @@ const handleContactSelected = async (contact: Contact) => {
   if (contactIndex !== -1) {
     contacts[contactIndex]!.unreadCount = 0
   }
-  
-  // 获取该联系人的消息列表
-  await fetchMessages(contact.id)
 }
 
 // 处理发送消息

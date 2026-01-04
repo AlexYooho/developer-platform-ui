@@ -298,6 +298,16 @@ const scrollToBottom = (smooth = true) => {
   })
 }
 
+// 立即滚动到底部（用于联系人切换）
+const scrollToBottomImmediate = () => {
+  // 使用 setTimeout 确保 DOM 完全更新后再滚动
+  setTimeout(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  }, 0)
+}
+
 // 处理发送消息
 const handleSendMessage = (data: { text: string; type: string }) => {
   emit('send-message', data)
@@ -360,17 +370,27 @@ const simulateTyping = () => {
 }
 
 // 监听活跃联系人变化
-watch(() => props.activeContact, (newContact) => {
-  if (newContact) {
-    scrollToBottom(false)
+watch(() => props.activeContact, (newContact, oldContact) => {
+  if (newContact && newContact.id !== oldContact?.id) {
     // 模拟对方可能正在输入
     setTimeout(simulateTyping, 1000)
   }
 })
 
-// 监听消息变化
-watch(() => messages.value.length, () => {
-  scrollToBottom()
+// 监听消息prop变化 - 用于联系人切换时的消息加载
+watch(() => props.messages, (newMessages, oldMessages) => {
+  // 如果是联系人切换导致的消息变化（消息数组完全替换）
+  if (newMessages && oldMessages && newMessages !== oldMessages) {
+    scrollToBottomImmediate()
+  }
+}, { immediate: false })
+
+// 监听消息数量变化 - 只在消息增加时滚动（新消息）
+watch(() => messages.value.length, (newLength, oldLength) => {
+  // 只有在消息数量增加时才滚动（新消息），避免切换联系人时的重复滚动
+  if (oldLength !== undefined && newLength > oldLength) {
+    scrollToBottom()
+  }
 })
 
 onMounted(() => {

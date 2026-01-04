@@ -119,7 +119,7 @@ interface MessageData {
   send_time: string
   reference_id: number
   like_count: number
-  at_user_ids: string | null
+  at_user_ids: number[] | null
   un_read_count: number | null
 }
 
@@ -174,11 +174,23 @@ const convertConversationToContact = (conversation: ConversationData): Contact =
 const convertMessageToFrontend = (messageData: MessageData, currentUserId: number = 1): Message => {
   return {
     id: messageData.id.toString(),
-    text: messageData.message_content,
+    is_sent: messageData.send_id === currentUserId,
+    send_id: messageData.send_id,
+    receiver_id: messageData.receiver_id,
+    group_id: messageData.group_id || undefined,
+    conv_seq: messageData.conv_seq,
+    message_content: messageData.message_content,
+    message_content_type: messageData.message_content_type,
+    //message_status: messageData.message_status === 0 ? 'sent' : 'failed',
+    message_status: messageData.message_status,
+    read_status: messageData.read_status,
+    send_nickname: messageData.send_nickname,
+    send_time: messageData.send_time,
     timestamp: new Date(messageData.send_time).getTime(),
-    isSent: messageData.send_id === currentUserId,
-    status: messageData.message_status === 0 ? 'sent' : 'failed',
-    type: messageData.message_content_type === 0 ? 'text' : 'file'
+    reference_id: messageData.reference_id,
+    like_count: messageData.like_count,
+    at_user_ids: messageData.at_user_ids || [],
+    //type: messageData.message_content_type === 0 ? 'text' : 'file'
   }
 }
 
@@ -194,20 +206,11 @@ const fetchConversations = async () => {
       // 转换并添加新的联系人数据
       const newContacts = response.data.map(convertConversationToContact)
       contacts.push(...newContacts)
-      // 如果有联系人且没有选中的联系人，默认选中第一个
-      if (contacts.length > 0 && !activeContact.value) {
-        const firstContact = contacts[0]
-        if (firstContact) {
-          // handleContactSelected(firstContact)
-        }
-      }
     } else {
       console.error('获取会话列表失败:', response.data?.msg || '未知错误')
     }
   } catch (error) {
     console.error('获取会话列表出错:', error)
-    // 如果请求失败，可以显示一些默认数据或错误提示
-    // 这里暂时保持空列表
   } finally {
     isLoadingContacts.value = false
   }
@@ -259,11 +262,19 @@ const handleSendMessage = (data: { text: string; type: string }) => {
   
   const newMessage: Message = {
     id: Date.now().toString(),
-    text: data.text,
+    is_sent: true,
+    send_id: 1,
+    receiver_id: parseInt(activeContact.value?.id || '0'),
+    group_id: undefined,
+    message_content: data.text,
+    message_content_type: data.type as any,
+    message_status: 0,
+    read_status: 0,
+    send_nickname: currentUser.value?.name || '',
     timestamp: Date.now(),
-    isSent: true,
-    status: 'sending',
-    type: data.type as any
+    //status: 'sending',
+    //type: data.type as any
+    
   }
   
   // 添加到消息列表
@@ -281,11 +292,11 @@ const handleSendMessage = (data: { text: string; type: string }) => {
   
   // 模拟发送状态变化
   setTimeout(() => {
-    newMessage.status = 'sent'
+    newMessage.message_status = 0
     setTimeout(() => {
-      newMessage.status = 'delivered'
+      newMessage.message_status = 1
       setTimeout(() => {
-        newMessage.status = 'read'
+        newMessage.message_status = 2
       }, 1000)
     }, 500)
   }, 500)
@@ -306,10 +317,18 @@ const handleSendMessage = (data: { text: string; type: string }) => {
     
     const replyMessage: Message = {
       id: (Date.now() + 1).toString(),
-      text: randomReply,
+      send_id: 2,
+      receiver_id: parseInt(activeContact.value?.id || '0'),
+      message_content: randomReply,
+      message_content_type: 0,
       timestamp: Date.now(),
-      isSent: false,
-      status: 'read'
+      is_sent: false,
+      message_status: 2,
+      read_status: 1,
+      send_nickname: currentUser.value?.name || '',
+      reference_id: 0,
+      like_count: 0,
+      at_user_ids: []
     }
     
     if (activeContact.value) {
@@ -345,14 +364,18 @@ const handleFileUpload = (file: File) => {
   if (activeContact.value) {
     const fileMessage: Message = {
       id: Date.now().toString(),
-      text: file.name,
+      message_content: file.name,
       timestamp: Date.now(),
-      isSent: true,
-      status: 'sent',
-      type: file.type.startsWith('image/') ? 'image' : 'file',
-      fileName: file.name,
-      fileSize: file.size,
-      fileUrl: URL.createObjectURL(file)
+      is_sent: true,
+      message_status: 0,
+      message_content_type: file.type.startsWith('image/') ? 1 : 2,
+      send_id: 1,
+      receiver_id: parseInt(activeContact.value?.id || '0'),
+      read_status: 0,
+      send_nickname: currentUser.value?.name || ''
+      // fileName: file.name,
+      // fileSize: file.size,
+      // fileUrl: URL.createObjectURL(file)
     }
     
     if (!allMessages[activeContact.value.id]) {
@@ -383,10 +406,10 @@ const handleMessageResend = (messageId: string) => {
   if (messages) {
     const message = messages.find(m => m.id === messageId)
     if (message) {
-      message.status = 'sending'
+      message.message_status = 0
       setTimeout(() => {
         if (message) {
-          message.status = 'sent'
+          message.message_status = 1
         }
       }, 1000)
     }

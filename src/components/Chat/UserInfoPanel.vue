@@ -264,8 +264,6 @@ const fetchFriendDetailInfo = async () => {
   if(response.code === 200 && response.data) {
     // 转换好友信息
     var friendInfo = convertFriendDetailInfoToFrontend(response.data)
-    // 这里可以将好友详情信息存储或使用，目前先打印日志
-    console.log('好友详情信息:', friendInfo)
     // 转换相同群组信息
     const groupInfos = response.data.same_group_info.map(convertSameGroupInfoToFrontend);
     sharedGroups.value = groupInfos

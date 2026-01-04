@@ -67,7 +67,6 @@ class HttpClient {
           }
         }
 
-        console.log('🚀 请求发送:', config)
         return config
       },
       (error) => {
@@ -85,7 +84,6 @@ class HttpClient {
     this.instance.interceptors.response.use(
       (response: AxiosResponse<ApiResponse>) => {
         this.hideLoading()
-        console.log('✅ 响应成功:', response)
 
         const { data } = response
         
@@ -174,7 +172,6 @@ class HttpClient {
     if (!this.loading) {
       this.loading = true
       // 这里可以显示全局 loading 组件
-      console.log('🔄 加载中...')
     }
   }
 
@@ -185,7 +182,6 @@ class HttpClient {
     if (this.loading) {
       this.loading = false
       // 这里可以隐藏全局 loading 组件
-      console.log('✨ 加载完成')
     }
   }
 
@@ -320,7 +316,6 @@ class HttpClient {
    */
   public cancelRequest(message?: string): void {
     // 可以实现请求取消逻辑
-    console.log('🚫 取消请求:', message)
   }
 }
 

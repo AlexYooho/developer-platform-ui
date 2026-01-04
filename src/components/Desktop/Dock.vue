@@ -139,7 +139,6 @@ const getDockItemStyle = (index: number) => {
 
 // 处理应用点击
 const handleAppClick = (app: App) => {
-  console.log(`点击了应用: ${app.name}`)
   
   // 切换活跃状态
   props.apps.forEach(a => a.isActive = false)

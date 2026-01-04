@@ -36,8 +36,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('token', userData.accessToken)
     localStorage.setItem('refreshToken', userData.refreshToken)
-    
-    console.log('用户登录成功:', userData)
   }
 
   const logout = () => {
@@ -49,8 +47,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
     localStorage.removeItem('loginTime')
     localStorage.removeItem('isAuthenticated')
-    
-    console.log('用户已退出登录')
   }
 
   const checkAuth = () => {
@@ -69,16 +65,12 @@ export const useAuthStore = defineStore('auth', () => {
         const maxSessionAge = 24 * 60 * 60 * 1000 // 24小时
         
         if (sessionAge > maxSessionAge) {
-          console.log('会话已过期，自动退出登录')
           logout()
           return false
         }
-        
-        console.log('恢复用户会话:', user.value)
         return true
       }
     } catch (error) {
-      console.error('检查认证状态失败:', error)
       logout()
     }
     

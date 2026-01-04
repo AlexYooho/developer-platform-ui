@@ -138,7 +138,6 @@ const updateTime = () => {
 
 // 处理Dock应用点击
 const handleAppClick = (app: App) => {
-  console.log(`从Dock点击了应用: ${app.name}`)
   
   // 应用配置
   const appConfigs: Record<string, { title: string; width?: number; height?: number; icon?: string }> = {

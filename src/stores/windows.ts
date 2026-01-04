@@ -88,7 +88,6 @@ export const useWindowsStore = defineStore('windows', () => {
     windows.value.push(newWindow)
     activeWindowId.value = windowId
     
-    console.log('创建窗口:', newWindow)
     return newWindow
   }
 
@@ -101,7 +100,6 @@ export const useWindowsStore = defineStore('windows', () => {
         ...updates,
         lastActiveAt: Date.now()
       } as AppWindow
-      console.log('更新窗口:', windowId, updates)
     }
   }
 
@@ -123,8 +121,6 @@ export const useWindowsStore = defineStore('windows', () => {
           activeWindowId.value = null
         }
       }
-      
-      console.log('关闭窗口:', closedWindow.title)
     }
   }
 
@@ -145,7 +141,6 @@ export const useWindowsStore = defineStore('windows', () => {
       }
       
       activeWindowId.value = windowId
-      console.log('激活窗口:', window.title)
     }
   }
 

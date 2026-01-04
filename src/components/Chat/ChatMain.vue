@@ -57,7 +57,7 @@
             v-for="message in group"
             :key="message.id"
             :message="message"
-            :show-avatar="!message.isSent"
+            :show-avatar="!message.is_sent"
             :contact-avatar="activeContact?.avatar"
             @resend="handleResendMessage"
             @delete="handleDeleteMessage"
@@ -128,15 +128,31 @@ import type { ContextMenuItem } from '@/components/Common/ContextMenu.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
 
 export interface Message {
+  // id: string
+  // text: string
+  // timestamp: number
+  // isSent: boolean
+  // status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
+  // type?: 'text' | 'image' | 'file' | 'emoji'
+  // fileUrl?: string
+  // fileName?: string
+  // fileSize?: number
   id: string
-  text: string
+  is_sent: boolean
+  send_id: number
+  receiver_id: number
+  group_id?: number
+  conv_seq?: number
+  message_content: string
+  message_content_type: number
+  message_status: number
+  read_status: number
+  send_nickname: string
+  send_time?: string
   timestamp: number
-  isSent: boolean
-  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
-  type?: 'text' | 'image' | 'file' | 'emoji'
-  fileUrl?: string
-  fileName?: string
-  fileSize?: number
+  reference_id?: number
+  like_count?: number
+  at_user_ids?: number[]
 }
 
 interface Props {
@@ -185,7 +201,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
       iconPath: 'M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
       action: () => copyMessage(currentMessage.value!)
     },
-    ...(currentMessage.value.isSent ? [{
+    ...(currentMessage.value.is_sent ? [{
       key: 'delete',
       label: '删除',
       iconPath: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
@@ -202,7 +218,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
 
 // 消息操作函数
 const copyMessage = (message: Message) => {
-  navigator.clipboard.writeText(message.text)
+  navigator.clipboard.writeText(message.message_content)
 }
 
 const handleDelete = (message: Message) => {
@@ -215,37 +231,13 @@ const replyMessage = (message: Message) => {
   console.log('回复消息:', message.id)
 }
 
-// 默认消息数据
-const defaultMessages: Message[] = [
-  {
-    id: '1',
-    text: 'Inter 不错，但也许可以试试更现代一点的？',
-    timestamp: Date.now() - 3600000,
-    isSent: false,
-    status: 'read'
-  },
-  {
-    id: '2',
-    text: '数据！我们试试 Rounded Mplus 吧。',
-    timestamp: Date.now() - 3300000,
-    isSent: false,
-    status: 'read'
-  },
-  {
-    id: '3',
-    text: '听起来不错。',
-    timestamp: Date.now() - 1800000,
-    isSent: true,
-    status: 'read'
-  }
-]
 
 // 使用传入的消息或默认消息
-const messages = computed(() => props.messages.length > 0 ? props.messages : defaultMessages)
+const messages = computed(() => props.messages)
 
 // 按日期分组消息
 const groupedMessages = computed(() => {
-  const groups: Record<string, Message[]> = {}
+  const groups: Record<string, Message[]> = {} // Record<日期, 消息数组>
   
   messages.value.forEach(message => {
     const date = new Date(message.timestamp).toDateString()

@@ -2,14 +2,14 @@
   <div 
     class="message-item"
     :class="{ 
-      'message-sent': message.isSent, 
-      'message-received': !message.isSent,
-      'message-failed': message.status === 'failed'
+      'message-sent': message.is_sent, 
+      'message-received': !message.is_sent,
+      'message-failed': message.message_status === 99
     }"
   >
     <!-- 接收消息的头像 -->
     <Avatar
-      v-if="showAvatar && !message.isSent"
+      v-if="showAvatar && !message.is_sent"
       :src="contactAvatar"
       alt="联系人头像"
       size="sm"
@@ -25,17 +25,17 @@
         @click="handleMessageClick"
       >
         <!-- 文本消息 -->
-        <div v-if="message.type === 'text' || !message.type" class="message-text">
-          {{ message.text }}
+        <div v-if="message.message_content_type === 0 || !message.message_content_type" class="message-text">
+          {{ message.message_content }}
         </div>
         
         <!-- 图片消息 -->
-        <div v-else-if="message.type === 'image'" class="message-image">
-          <img :src="message.fileUrl" :alt="message.fileName" @click="previewImage" />
+        <div v-else-if="message.message_content_type === 1" class="message-image">
+          <img :src="message.message_content" :alt="message.message_content" @click="previewImage" />
         </div>
         
         <!-- 文件消息 -->
-        <div v-else-if="message.type === 'file'" class="message-file">
+        <div v-else-if="message.message_content_type === 2" class="message-file">
           <div class="file-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -46,8 +46,8 @@
             </svg>
           </div>
           <div class="file-info">
-            <div class="file-name">{{ message.fileName }}</div>
-            <div class="file-size">{{ formatFileSize(message.fileSize) }}</div>
+            <div class="file-name">{{ message.message_content }}</div>
+            <div class="file-size">{{ formatFileSize(0) }}</div>
           </div>
           <button class="download-btn" @click="downloadFile">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,8 +59,8 @@
         </div>
         
         <!-- 表情消息 -->
-        <div v-else-if="message.type === 'emoji'" class="message-emoji">
-          {{ message.text }}
+        <div v-else-if="message.message_content_type === 3" class="message-emoji">
+          {{ message.message_content }}
         </div>
       </div>
       
@@ -69,9 +69,10 @@
         <span class="message-time">{{ formatTime(message.timestamp) }}</span>
         
         <!-- 发送状态（仅发送的消息显示） -->
-        <div v-if="message.isSent" class="message-status">
+        <div v-if="message.is_sent" class="message-status">
+          <!-- 未送达 -->
           <svg 
-            v-if="message.status === 'sending'" 
+            v-if="message.message_status === 0"
             class="status-icon sending" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -82,8 +83,9 @@
             <polyline points="12,6 12,12 16,14"/>
           </svg>
           
+          <!-- 已送达 -->
           <svg 
-            v-else-if="message.status === 'sent'" 
+            v-else-if="message.message_status === 1" 
             class="status-icon sent" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -93,8 +95,9 @@
             <polyline points="20,6 9,17 4,12"/>
           </svg>
           
+          <!--  交付-->
           <svg 
-            v-else-if="message.status === 'delivered'" 
+            v-else-if="message.message_status === 4" 
             class="status-icon delivered" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -105,8 +108,9 @@
             <polyline points="16,6 5,17 0,12"/>
           </svg>
           
+          <!-- 已读 -->
           <svg 
-            v-else-if="message.status === 'read'" 
+            v-else-if="message.message_status === 3" 
             class="status-icon read" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -117,8 +121,9 @@
             <polyline points="16,6 5,17 0,12"/>
           </svg>
           
+          <!-- 失败 -->
           <svg 
-            v-else-if="message.status === 'failed'" 
+            v-else-if="message.message_status === 99" 
             class="status-icon failed" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -133,7 +138,7 @@
         
         <!-- 重发按钮（失败消息） -->
         <button 
-          v-if="message.status === 'failed'" 
+          v-if="message.message_status === 99" 
           class="resend-btn"
           @click="handleResend"
           title="重新发送"
@@ -149,7 +154,7 @@
     
     <!-- 发送消息的头像 -->
     <Avatar
-      v-if="message.isSent"
+      v-if="message.is_sent"
       src="https://api.dicebear.com/7.x/avataaars/svg?seed=me"
       alt="我的头像"
       size="sm"
@@ -229,8 +234,8 @@ const handleDelete = () => {
 // 复制消息
 const copyMessage = async () => {
   try {
-    await navigator.clipboard.writeText(props.message.text)
-    emit('copy', props.message.text)
+    await navigator.clipboard.writeText(props.message.message_content)
+    emit('copy', props.message.message_content)
   } catch (err) {
     console.error('复制失败:', err)
   }
@@ -243,21 +248,21 @@ const replyMessage = () => {
 
 // 预览图片
 const previewImage = () => {
-  if (props.message.fileUrl) {
-    window.open(props.message.fileUrl, '_blank')
-  }
+  // if (props.message.fileUrl) {
+  //   window.open(props.message.fileUrl, '_blank')
+  // }
 }
 
 // 下载文件
 const downloadFile = () => {
-  if (props.message.fileUrl && props.message.fileName) {
-    const link = document.createElement('a')
-    link.href = props.message.fileUrl
-    link.download = props.message.fileName
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
+  // if (props.message.fileUrl && props.message.fileName) {
+  //   const link = document.createElement('a')
+  //   link.href = props.message.fileUrl
+  //   link.download = props.message.fileName
+  //   document.body.appendChild(link)
+  //   link.click()
+  //   document.body.removeChild(link)
+  // }
 }
 
 </script>

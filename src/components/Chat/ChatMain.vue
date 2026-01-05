@@ -57,7 +57,7 @@
             v-for="message in group"
             :key="message.id"
             :message="message"
-            :show-avatar="!message.is_sent"
+            :show-avatar="!message.isSent"
             :contact-avatar="activeContact?.avatar"
             @resend="handleResendMessage"
             @delete="handleDeleteMessage"
@@ -138,21 +138,21 @@ export interface Message {
   // fileName?: string
   // fileSize?: number
   id: string
-  is_sent: boolean
-  send_id: number
-  receiver_id: number
-  group_id?: number
-  conv_seq?: number
-  message_content: string
-  message_content_type: number
-  message_status: number
-  read_status: number
-  send_nickname: string
-  send_time?: string
+  isSent: boolean
+  sendId: number
+  receiverId: number
+  groupId?: number
+  convSeq?: number
+  messageContent: string
+  messageContentType: number
+  messageStatus: number
+  readStatus: number
+  sendNickname: string
+  sendTime?: string
   timestamp: number
-  reference_id?: number
-  like_count?: number
-  at_user_ids?: number[]
+  referenceId?: number
+  likeCount?: number
+  atUserIds?: number[]
 }
 
 interface Props {
@@ -201,7 +201,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
       iconPath: 'M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
       action: () => copyMessage(currentMessage.value!)
     },
-    ...(currentMessage.value.is_sent ? [{
+    ...(currentMessage.value.isSent ? [{
       key: 'delete',
       label: '删除',
       iconPath: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
@@ -218,7 +218,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
 
 // 消息操作函数
 const copyMessage = (message: Message) => {
-  navigator.clipboard.writeText(message.message_content)
+  navigator.clipboard.writeText(message.messageContent)
 }
 
 const handleDelete = (message: Message) => {

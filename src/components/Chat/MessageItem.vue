@@ -2,14 +2,14 @@
   <div 
     class="message-item"
     :class="{ 
-      'message-sent': message.is_sent, 
-      'message-received': !message.is_sent,
-      'message-failed': message.message_status === 99
+      'message-sent': message.isSent, 
+      'message-received': !message.isSent,
+      'message-failed': message.messageStatus === 99
     }"
   >
     <!-- 接收消息的头像 -->
     <Avatar
-      v-if="showAvatar && !message.is_sent"
+      v-if="showAvatar && !message.isSent"
       :src="contactAvatar"
       alt="联系人头像"
       size="sm"
@@ -25,17 +25,17 @@
         @click="handleMessageClick"
       >
         <!-- 文本消息 -->
-        <div v-if="message.message_content_type === 0 || !message.message_content_type" class="message-text">
-          {{ message.message_content }}
+        <div v-if="message.messageContentType === 0 || !message.messageContentType" class="message-text">
+          {{ message.messageContent }}
         </div>
         
         <!-- 图片消息 -->
-        <div v-else-if="message.message_content_type === 1" class="message-image">
-          <img :src="message.message_content" :alt="message.message_content" @click="previewImage" />
+        <div v-else-if="message.messageContentType === 1" class="message-image">
+          <img :src="message.messageContent" :alt="message.messageContent" @click="previewImage" />
         </div>
         
         <!-- 文件消息 -->
-        <div v-else-if="message.message_content_type === 2" class="message-file">
+        <div v-else-if="message.messageContentType === 2" class="message-file">
           <div class="file-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -46,7 +46,7 @@
             </svg>
           </div>
           <div class="file-info">
-            <div class="file-name">{{ message.message_content }}</div>
+            <div class="file-name">{{ message.messageContent }}</div>
             <div class="file-size">{{ formatFileSize(0) }}</div>
           </div>
           <button class="download-btn" @click="downloadFile">
@@ -59,8 +59,8 @@
         </div>
         
         <!-- 表情消息 -->
-        <div v-else-if="message.message_content_type === 3" class="message-emoji">
-          {{ message.message_content }}
+        <div v-else-if="message.messageContentType === 3" class="message-emoji">
+          {{ message.messageContent }}
         </div>
       </div>
       
@@ -69,10 +69,10 @@
         <span class="message-time">{{ formatTime(message.timestamp) }}</span>
         
         <!-- 发送状态（仅发送的消息显示） -->
-        <div v-if="message.is_sent" class="message-status">
+        <div v-if="message.isSent" class="message-status">
           <!-- 未送达 -->
           <svg 
-            v-if="message.message_status === 0"
+            v-if="message.messageStatus === 0"
             class="status-icon sending" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -85,7 +85,7 @@
           
           <!-- 已送达 -->
           <svg 
-            v-else-if="message.message_status === 1" 
+            v-else-if="message.messageStatus === 1" 
             class="status-icon sent" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -97,7 +97,7 @@
           
           <!--  交付-->
           <svg 
-            v-else-if="message.message_status === 4" 
+            v-else-if="message.messageStatus === 4" 
             class="status-icon delivered" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -110,7 +110,7 @@
           
           <!-- 已读 -->
           <svg 
-            v-else-if="message.message_status === 3" 
+            v-else-if="message.messageStatus === 3" 
             class="status-icon read" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -123,7 +123,7 @@
           
           <!-- 失败 -->
           <svg 
-            v-else-if="message.message_status === 99" 
+            v-else-if="message.messageStatus === 99" 
             class="status-icon failed" 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -138,7 +138,7 @@
         
         <!-- 重发按钮（失败消息） -->
         <button 
-          v-if="message.message_status === 99" 
+          v-if="message.messageStatus === 99" 
           class="resend-btn"
           @click="handleResend"
           title="重新发送"
@@ -154,7 +154,7 @@
     
     <!-- 发送消息的头像 -->
     <Avatar
-      v-if="message.is_sent"
+      v-if="message.isSent"
       src="https://api.dicebear.com/7.x/avataaars/svg?seed=me"
       alt="我的头像"
       size="sm"
@@ -234,8 +234,8 @@ const handleDelete = () => {
 // 复制消息
 const copyMessage = async () => {
   try {
-    await navigator.clipboard.writeText(props.message.message_content)
-    emit('copy', props.message.message_content)
+    await navigator.clipboard.writeText(props.message.messageContent)
+    emit('copy', props.message.messageContent)
   } catch (err) {
     console.error('复制失败:', err)
   }

@@ -107,6 +107,7 @@ interface ConversationData {
 // 后端消息数据类型
 interface MessageData {
   id: number
+  is_sent: boolean
   send_id: number
   receiver_id: number
   group_id: number | null
@@ -158,40 +159,17 @@ const currentMessages = computed(() => {
 // 转换后端数据为前端格式
 const convertConversationToContact = (conversation: ConversationData): Contact => {
   return {
-    id: conversation.target_id.toString(),
+    id: conversation.id,
+    target_id: conversation.target_id,
     name: conversation.name,
     type: conversation.conv_type,
     avatar: conversation.head_image,
     status: 'online', // 后端没有在线状态，默认设为在线
-    lastMessage: conversation.last_msg_content,
+    lastMessageContent: conversation.last_msg_content,
     lastMessageTime: new Date(conversation.last_msg_time).getTime(),
     unreadCount: conversation.unread_count,
     isMuted: conversation.muted,
     isPinned: conversation.pinned
-  }
-}
-
-// 转换后端消息数据为前端Message格式
-const convertMessageToFrontend = (messageData: MessageData, currentUserId: number = 1): Message => {
-  return {
-    id: messageData.id.toString(),
-    is_sent: messageData.send_id === currentUserId,
-    send_id: messageData.send_id,
-    receiver_id: messageData.receiver_id,
-    group_id: messageData.group_id || undefined,
-    conv_seq: messageData.conv_seq,
-    message_content: messageData.message_content,
-    message_content_type: messageData.message_content_type,
-    //message_status: messageData.message_status === 0 ? 'sent' : 'failed',
-    message_status: messageData.message_status,
-    read_status: messageData.read_status,
-    send_nickname: messageData.send_nickname,
-    send_time: messageData.send_time,
-    timestamp: new Date(messageData.send_time).getTime(),
-    reference_id: messageData.reference_id,
-    like_count: messageData.like_count,
-    at_user_ids: messageData.at_user_ids || [],
-    //type: messageData.message_content_type === 0 ? 'text' : 'file'
   }
 }
 
@@ -217,10 +195,32 @@ const fetchConversations = async () => {
   }
 }
 
+// 转换后端消息数据为前端Message格式
+const convertMessageToFrontend = (messageData: MessageData): Message => {
+  return {
+    id: messageData.id.toString(),
+    isSent: messageData.is_sent,
+    sendId: messageData.send_id,
+    receiverId: messageData.receiver_id,
+    groupId: messageData.group_id || undefined,
+    convSeq: messageData.conv_seq,
+    messageContent: messageData.message_content,
+    messageContentType: messageData.message_content_type,
+    messageStatus: messageData.message_status,
+    readStatus: messageData.read_status,
+    sendNickname: messageData.send_nickname,
+    sendTime: messageData.send_time,
+    timestamp: new Date(messageData.send_time).getTime(),
+    referenceId: messageData.reference_id,
+    likeCount: messageData.like_count,
+    atUserIds: messageData.at_user_ids || []
+  }
+}
+
 // 获取指定联系人的消息列表
-const fetchMessages = async (contactId: string) => {
+const fetchMessages = async (targetId: number) => {
   try {
-    const response = await api.message.getMessages(contactId)
+    const response = await api.message.getMessages(targetId)
     if (response.data && response.code === 200) {
       // 转换消息数据
       const messages = response.data.map((msgData: MessageData) => convertMessageToFrontend(msgData))
@@ -229,23 +229,21 @@ const fetchMessages = async (contactId: string) => {
       messages.sort((a: Message, b: Message) => a.timestamp - b.timestamp)
       
       // 存储到对应联系人的消息列表中
-      allMessages[contactId] = messages
+      allMessages[targetId] = messages
     } else {
-      console.error('获取消息列表失败:', response.data?.msg || '未知错误')
       // 如果获取失败，设置为空数组
-      allMessages[contactId] = []
+      allMessages[targetId] = []
     }
   } catch (error) {
-    console.error('获取消息列表出错:', error)
     // 如果请求失败，设置为空数组
-    allMessages[contactId] = []
+    allMessages[targetId] = []
   }
 }
 
 // 处理联系人选择
 const handleContactSelected = async (contact: Contact) => {
   // 先获取该联系人的消息列表
-  await fetchMessages(contact.id)
+  await fetchMessages(contact.target_id)
   
   // 然后设置活跃联系人（这样消息已经准备好了）
   activeContact.value = contact
@@ -278,15 +276,15 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
   
   const newMessage: Message = {
     id: Date.now().toString(),
-    is_sent: true,
-    send_id: 1,
-    receiver_id: parseInt(activeContact.value?.id || '0'),
-    group_id: undefined,
-    message_content: data.text,
-    message_content_type: data.type as any,
-    message_status: 0,
-    read_status: 0,
-    send_nickname: currentUser.value?.name || '',
+    isSent: true,
+    sendId: 1,
+    receiverId: activeContact.value?.id,
+    groupId: undefined,
+    messageContent: data.text,
+    messageContentType: data.type as any,
+    messageStatus: 0,
+    readStatus: 0,
+    sendNickname: currentUser.value?.name || '',
     timestamp: Date.now(),
     //status: 'sending',
     //type: data.type as any
@@ -302,17 +300,17 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
   // 更新联系人的最后消息
   const contactIndex = contacts.findIndex(c => c.id === activeContact.value?.id)
   if (contactIndex !== -1) {
-    contacts[contactIndex]!.lastMessage = data.text
+    contacts[contactIndex]!.lastMessageContent = data.text
     contacts[contactIndex]!.lastMessageTime = Date.now()
   }
   
   // 模拟发送状态变化
   setTimeout(() => {
-    newMessage.message_status = 0
+    newMessage.messageStatus = 0
     setTimeout(() => {
-      newMessage.message_status = 1
+      newMessage.messageStatus = 1
       setTimeout(() => {
-        newMessage.message_status = 2
+        newMessage.messageStatus = 2
       }, 1000)
     }, 500)
   }, 500)
@@ -333,18 +331,18 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
     
     const replyMessage: Message = {
       id: (Date.now() + 1).toString(),
-      send_id: 2,
-      receiver_id: parseInt(activeContact.value?.id || '0'),
-      message_content: randomReply,
-      message_content_type: 0,
+      sendId: 2,
+      receiverId: activeContact.value?.target_id || 0,
+      messageContent: randomReply,
+      messageContentType: 0,
       timestamp: Date.now(),
-      is_sent: false,
-      message_status: 2,
-      read_status: 1,
-      send_nickname: currentUser.value?.name || '',
-      reference_id: 0,
-      like_count: 0,
-      at_user_ids: []
+      isSent: false,
+      messageStatus: 2,
+      readStatus: 1,
+      sendNickname: currentUser.value?.name || '',
+      referenceId: 0,
+      likeCount: 0,
+      atUserIds: []
     }
     
     if (activeContact.value) {
@@ -352,7 +350,7 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
       
       // 更新联系人的最后消息
       if (contactIndex !== -1) {
-        contacts[contactIndex]!.lastMessage = randomReply
+        contacts[contactIndex]!.lastMessageContent = randomReply
         contacts[contactIndex]!.lastMessageTime = Date.now()
       }
     }
@@ -380,15 +378,15 @@ const handleFileUpload = (file: File) => {
   if (activeContact.value) {
     const fileMessage: Message = {
       id: Date.now().toString(),
-      message_content: file.name,
+      messageContent: file.name,
       timestamp: Date.now(),
-      is_sent: true,
-      message_status: 0,
-      message_content_type: file.type.startsWith('image/') ? 1 : 2,
-      send_id: 1,
-      receiver_id: parseInt(activeContact.value?.id || '0'),
-      read_status: 0,
-      send_nickname: currentUser.value?.name || ''
+      isSent: true,
+      messageStatus: 0,
+      messageContentType: file.type.startsWith('image/') ? 1 : 2,
+      sendId: 1,
+      receiverId: activeContact.value?.target_id,
+      readStatus: 0,
+      sendNickname: currentUser.value?.name || ''
       // fileName: file.name,
       // fileSize: file.size,
       // fileUrl: URL.createObjectURL(file)
@@ -422,10 +420,10 @@ const handleMessageResend = (messageId: string) => {
   if (messages) {
     const message = messages.find(m => m.id === messageId)
     if (message) {
-      message.message_status = 0
+      message.messageStatus = 0
       setTimeout(() => {
         if (message) {
-          message.message_status = 1
+          message.messageStatus = 1
         }
       }, 1000)
     }
@@ -526,11 +524,12 @@ const handleContactsViewStartChat = (contact: any) => {
     // 如果不存在，添加到联系人列表并选中
     const newContact: Contact = {
       id: contact.id,
+      target_id: contact.target_id,
       name: contact.name,
       type: contact.type,
       avatar: contact.avatar,
       status: contact.status || 'online',
-      lastMessage: '',
+      lastMessageContent: '',
       lastMessageTime: Date.now(),
       unreadCount: 0
     }

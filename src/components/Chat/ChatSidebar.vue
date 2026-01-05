@@ -38,7 +38,7 @@
         v-for="contact in filteredContacts" 
         :key="contact.id"
         class="contact-item"
-        :class="{ active: contact.id === activeContactId }"
+        :class="{ active: contact.target_id === activeContactId }"
         @click="selectContact(contact)"
       >
         <Avatar
@@ -56,7 +56,7 @@
           </div>
           
           <div class="last-message">
-            <span class="message-preview">{{ contact.lastMessage }}</span>
+            <span class="message-preview">{{ contact.lastMessageContent }}</span>
             <div class="message-badges">
               <div 
                 v-if="contact.unreadCount > 0" 
@@ -98,12 +98,13 @@ import { ref, computed, onMounted } from 'vue'
 import Avatar from '@/components/Common/Avatar.vue'
 
 export interface Contact {
-  id: string
+  id: number
+  target_id: number
   type: number
   name: string
   avatar: string
   status: 'online' | 'offline' | 'away'
-  lastMessage: string
+  lastMessageContent: string
   lastMessageTime: number
   unreadCount: number
   isMuted?: boolean
@@ -119,7 +120,7 @@ export interface CurrentUser {
 
 interface Props {
   contacts?: Contact[]
-  activeContactId?: string
+  activeContactId?: number
   currentUser?: CurrentUser
   isLoading?: boolean
 }
@@ -131,7 +132,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   contacts: () => [],
-  activeContactId: '',
+  activeContactId: 0,
   isLoading: false,
   currentUser: () => ({
     id: 'me',
@@ -158,7 +159,7 @@ const filteredContacts = computed(() => {
   }
   return contacts.value.filter(contact => 
     contact.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    contact.lastMessage.toLowerCase().includes(searchQuery.value.toLowerCase())
+    contact.lastMessageContent.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
 })
 

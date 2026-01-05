@@ -99,6 +99,7 @@ import Avatar from '@/components/Common/Avatar.vue'
 
 export interface Contact {
   id: string
+  type: number
   name: string
   avatar: string
   status: 'online' | 'offline' | 'away'

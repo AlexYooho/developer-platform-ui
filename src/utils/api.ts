@@ -38,6 +38,11 @@ export const messageApi = {
   // 获取会话消息
   getMessages: (targetId: string | number) => {
     return http.get(`/message-module/api/message/PRIVATE_MESSAGE/loadMessage/WEB/${targetId}`)
+  },
+
+  // 发送消息
+  sendMessage: (conversationType: number, data: {}) => {
+    return http.post(`/message-module/api/message/${conversationType}/send`, data)
   }
 }
 

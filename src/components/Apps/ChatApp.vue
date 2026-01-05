@@ -160,6 +160,7 @@ const convertConversationToContact = (conversation: ConversationData): Contact =
   return {
     id: conversation.target_id.toString(),
     name: conversation.name,
+    type: conversation.conv_type,
     avatar: conversation.head_image,
     status: 'online', // 后端没有在线状态，默认设为在线
     lastMessage: conversation.last_msg_content,
@@ -258,8 +259,22 @@ const handleContactSelected = async (contact: Contact) => {
 }
 
 // 处理发送消息
-const handleSendMessage = (data: { text: string; type: string }) => {
+const handleSendMessage = async (data: { text: string; type: string }) => {
   if (!activeContact.value) return
+
+  const sendData = {
+    target_id: 2,
+    message_main_type: activeContact.value.type,
+    message_content_type: 0,
+    message_content: data.text,
+    terminal_type: 0
+  }
+  const response = await api.message.sendMessage(activeContact.value.type, sendData)
+  if(response.data && response.code === 200) {
+    console.log('发送消息成功:', response.data)
+  }else{
+    console.error('发送消息失败:', response.data?.msg || '未知错误')
+  }
   
   const newMessage: Message = {
     id: Date.now().toString(),
@@ -512,6 +527,7 @@ const handleContactsViewStartChat = (contact: any) => {
     const newContact: Contact = {
       id: contact.id,
       name: contact.name,
+      type: contact.type,
       avatar: contact.avatar,
       status: contact.status || 'online',
       lastMessage: '',

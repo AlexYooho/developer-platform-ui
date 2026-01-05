@@ -317,7 +317,6 @@ const handleSendMessage = (data: { text: string; type: string }) => {
 // 处理正在输入
 const handleTyping = () => {
   // 这里可以发送正在输入的状态给服务器
-  console.log('User is typing...')
 }
 
 // 处理文件上传

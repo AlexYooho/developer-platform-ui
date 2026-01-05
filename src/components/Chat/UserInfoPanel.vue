@@ -247,6 +247,7 @@ const deleteContact = () => {
   }
 }
 
+// 转换好友信息为前端格式
 const convertFriendDetailInfoToFrontend = (friendInfo: FriendDetailInfo) => {
   return {
     id: friendInfo.id,
@@ -259,6 +260,17 @@ const convertFriendDetailInfoToFrontend = (friendInfo: FriendDetailInfo) => {
   }
 }
 
+// 相同群组信息转换为前端格式
+const convertSameGroupInfoToFrontend = (sameGroupInfo: SameGroupInfo): SharedGroup => {
+  return {
+      id: sameGroupInfo.group_id.toString(),
+      name: sameGroupInfo.group_name,
+      avatar: sameGroupInfo.group_avatar,
+      memberCount: sameGroupInfo.group_member_count
+    }
+}
+
+// 获取好友详情信息
 const fetchFriendDetailInfo = async () => {
   const response = await api.friend.getFriendDetailInfo(props.contact!.id)
   if(response.code === 200 && response.data) {
@@ -269,16 +281,6 @@ const fetchFriendDetailInfo = async () => {
     const groupInfos = response.data.same_group_info.map(convertSameGroupInfoToFrontend);
     sharedGroups.value = groupInfos
   }
-}
-
-// 相同群组信息转换为前端格式
-const convertSameGroupInfoToFrontend = (sameGroupInfo: SameGroupInfo): SharedGroup => {
-  return {
-      id: sameGroupInfo.group_id.toString(),
-      name: sameGroupInfo.group_name,
-      avatar: sameGroupInfo.group_avatar,
-      memberCount: sameGroupInfo.group_member_count
-    }
 }
 
 onMounted(() => {

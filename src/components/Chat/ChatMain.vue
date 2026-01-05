@@ -115,6 +115,21 @@
     :menu-items="menuItems"
     @close="contextMenu.hideMenu"
   />
+
+  <!-- 模态框 -->
+  <Modal
+    v-model:visible="modalState.visible"
+    :type="modalState.type"
+    :title="modalState.title"
+    :message="modalState.message"
+    :confirm-text="modalState.confirmText"
+    :cancel-text="modalState.cancelText"
+    :show-cancel="modalState.showCancel"
+    :show-buttons="modalState.showButtons"
+    :close-on-overlay="modalState.closeOnOverlay"
+    @confirm="handleConfirm"
+    @cancel="handleCancel"
+  />
 </template>
 
 <script setup lang="ts">
@@ -126,6 +141,8 @@ import Avatar from '@/components/Common/Avatar.vue'
 import type { Contact } from './ChatSidebar.vue'
 import type { ContextMenuItem } from '@/components/Common/ContextMenu.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useModal } from '@/composables/useModal'
+import Modal from '@/components/Common/Modal.vue'
 
 export interface Message {
   // id: string
@@ -153,6 +170,9 @@ export interface Message {
   referenceId?: number
   likeCount?: number
   atUserIds?: number[]
+  isLiked?: boolean // 是否已点赞
+  isFavorited?: boolean // 是否已收藏
+  isRecalled?: boolean // 是否已撤回
 }
 
 interface Props {
@@ -184,6 +204,9 @@ const typingTimer = ref<number>()
 const contextMenu = useContextMenu()
 const currentMessage = ref<Message | null>(null)
 
+  // 模态框
+const { modalState, handleConfirm, handleCancel, alert } = useModal()
+
 // 右键菜单处理函数
 const handleContextMenu = (event: MouseEvent, message: Message) => {
   currentMessage.value = message
@@ -194,31 +217,129 @@ const handleContextMenu = (event: MouseEvent, message: Message) => {
 const menuItems = computed<ContextMenuItem[]>(() => {
   if (!currentMessage.value) return []
   
-  return [
-    {
-      key: 'copy',
-      label: '复制',
-      iconPath: 'M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
-      action: () => copyMessage(currentMessage.value!)
-    },
-    ...(currentMessage.value.isSent ? [{
+  const message = currentMessage.value
+  const items: ContextMenuItem[] = []
+  
+  // 复制
+  items.push({
+    key: 'copy',
+    label: '复制',
+    iconPath: 'M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
+    action: () => copyMessage(message)
+  })
+  
+  // 转发
+  items.push({
+    key: 'forward',
+    label: '转发',
+    iconPath: 'M9 17l4-5-4-5 M20 18v-2a4 4 0 0 0-4-4H4',
+    action: () => forwardMessage(message)
+  })
+  
+  // 收藏/取消收藏
+  items.push({
+    key: 'favorite',
+    label: message.isFavorited ? '取消收藏' : '收藏',
+    iconPath: message.isFavorited 
+      ? 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'
+      : 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+    action: () => toggleFavorite(message)
+  })
+  
+  // 点赞/取消点赞
+  items.push({
+    key: 'like',
+    label: message.isLiked ? '取消点赞' : '点赞',
+    iconPath: message.isLiked
+      ? 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'
+      : 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+    action: () => toggleLike(message)
+  })
+  
+  // 撤回（只有自己发送的消息且在2分钟内可以撤回）
+  const canRecall = message.isSent && !message.isRecalled && (Date.now() - message.timestamp) < 20 * 60 * 1000
+  if (canRecall) {
+    items.push({
+      key: 'recall',
+      label: '撤回',
+      iconPath: 'M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8',
+      action: () => recallMessage(message)
+    })
+  }
+  
+  // 删除（只有自己发送的消息可以删除）
+  if (message.isSent) {
+    items.push({
       key: 'delete',
       label: '删除',
       iconPath: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
-      action: () => handleDelete(currentMessage.value!)
-    }] : []),
-    {
-      key: 'reply',
-      label: '回复',
-      iconPath: 'M9 17l-4-5 4-5 M20 18v-2a4 4 0 0 0-4-4H4',
-      action: () => replyMessage(currentMessage.value!)
-    }
-  ]
+      action: () => handleDelete(message)
+    })
+  }
+  
+  // 回复
+  items.push({
+    key: 'reply',
+    label: '回复',
+    iconPath: 'M9 17l-4-5 4-5 M20 18v-2a4 4 0 0 0-4-4H4',
+    action: () => replyMessage(message)
+  })
+  
+  return items
 })
 
 // 消息操作函数
 const copyMessage = (message: Message) => {
   navigator.clipboard.writeText(message.messageContent)
+  // 可以添加复制成功的提示
+  console.log('消息已复制到剪贴板')
+}
+
+// 转发消息
+const forwardMessage = (message: Message) => {
+  // 这里可以打开转发对话框，选择转发的联系人
+  console.log('转发消息:', message.messageContent)
+  // 实际实现时可能需要打开一个联系人选择器
+  // emit('forward-message', message)
+}
+
+// 切换收藏状态
+const toggleFavorite = (message: Message) => {
+  message.isFavorited = !message.isFavorited
+  console.log(message.isFavorited ? '已收藏' : '已取消收藏')
+  // 这里可以调用API更新收藏状态
+  // api.message.toggleFavorite(message.id, message.isFavorited)
+}
+
+// 切换点赞状态
+const toggleLike = (message: Message) => {
+  const wasLiked = message.isLiked
+  message.isLiked = !message.isLiked
+  
+  // 更新点赞数量
+  if (message.isLiked) {
+    message.likeCount = (message.likeCount || 0) + 1
+  } else {
+    message.likeCount = Math.max((message.likeCount || 0) - 1, 0)
+  }
+  
+  console.log(message.isLiked ? '已点赞' : '已取消点赞')
+  // 这里可以调用API更新点赞状态
+  // api.message.toggleLike(message.id, message.isLiked)
+}
+
+// 撤回消息
+const recallMessage = (message: Message) => {
+  // 检查是否可以撤回（2分钟内）
+  const timeDiff = Date.now() - message.timestamp
+  if (timeDiff > 2 * 60 * 1000) {
+    alert('消息发送时间超过2分钟，无法撤回')
+    return
+  }
+  
+  message.isRecalled = true
+  message.messageContent = '你撤回了一条消息'
+  
 }
 
 const handleDelete = (message: Message) => {

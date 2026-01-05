@@ -212,8 +212,11 @@ const convertMessageToFrontend = (messageData: MessageData): Message => {
     sendTime: messageData.send_time,
     timestamp: new Date(messageData.send_time).getTime(),
     referenceId: messageData.reference_id,
-    likeCount: messageData.like_count,
-    atUserIds: messageData.at_user_ids || []
+    likeCount: messageData.like_count || 0,
+    atUserIds: messageData.at_user_ids || [],
+    isLiked: false, // 默认未点赞
+    isFavorited: false, // 默认未收藏
+    isRecalled: false // 默认未撤回
   }
 }
 
@@ -285,7 +288,11 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
     messageStatus: response.data.message_status,
     readStatus: response.data.read_status,
     sendNickname: response.data.send_nickname || '',
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    likeCount: 0,
+    isLiked: false,
+    isFavorited: false,
+    isRecalled: false
   }
   
   // 添加到消息列表
@@ -339,7 +346,10 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
       sendNickname: currentUser.value?.name || '',
       referenceId: 0,
       likeCount: 0,
-      atUserIds: []
+      atUserIds: [],
+      isLiked: false,
+      isFavorited: false,
+      isRecalled: false
     }
     
     if (activeContact.value) {
@@ -383,7 +393,11 @@ const handleFileUpload = (file: File) => {
       sendId: 1,
       receiverId: activeContact.value?.target_id,
       readStatus: 0,
-      sendNickname: currentUser.value?.name || ''
+      sendNickname: currentUser.value?.name || '',
+      likeCount: 0,
+      isLiked: false,
+      isFavorited: false,
+      isRecalled: false
       // fileName: file.name,
       // fileSize: file.size,
       // fileUrl: URL.createObjectURL(file)

@@ -275,20 +275,17 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
   }
   
   const newMessage: Message = {
-    id: Date.now().toString(),
-    isSent: true,
-    sendId: 1,
-    receiverId: activeContact.value?.id,
-    groupId: undefined,
-    messageContent: data.text,
-    messageContentType: data.type as any,
-    messageStatus: 0,
-    readStatus: 0,
-    sendNickname: currentUser.value?.name || '',
-    timestamp: Date.now(),
-    //status: 'sending',
-    //type: data.type as any
-    
+    id: response.data.id,
+    isSent: response.data.is_sent,
+    sendId: response.data.send_id,
+    receiverId: response.data.receiver_id,
+    groupId: response.data.group_id,
+    messageContent: response.data.message_content,
+    messageContentType: response.data.message_content_type,
+    messageStatus: response.data.message_status,
+    readStatus: response.data.read_status,
+    sendNickname: response.data.send_nickname || '',
+    timestamp: Date.now()
   }
   
   // 添加到消息列表

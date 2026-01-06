@@ -4,36 +4,36 @@
     :class="{ 
       'message-sent': message.isSent, 
       'message-received': !message.isSent,
-      'message-failed': message.messageStatus === 99
+      'message-failed': message.messageStatus === 99,
+      'message-recalled-item': message.isRecalled
     }"
   >
-    <!-- 接收消息的头像 -->
-    <Avatar
-      v-if="showAvatar && !message.isSent"
-      :src="contactAvatar"
-      alt="联系人头像"
-      size="sm"
-      class="message-avatar"
-    />
+    <!-- 撤回消息特殊布局 -->
+    <div v-if="message.isRecalled" class="message-recalled">
+      {{ message.messageContent }}
+    </div>
     
-    <!-- 消息内容 -->
-    <div class="message-content">
+    <!-- 正常消息布局 -->
+    <template v-else>
+      <!-- 接收消息的头像 -->
+      <Avatar
+        v-if="showAvatar && !message.isSent"
+        :src="contactAvatar"
+        alt="联系人头像"
+        size="sm"
+        class="message-avatar"
+      />
+      
+      <!-- 消息内容 -->
+      <div class="message-content">
       <!-- 消息气泡 -->
       <div 
         class="message-bubble"
         @contextmenu.prevent="showContextMenu"
         @click="handleMessageClick"
       >
-        <!-- 撤回消息 -->
-        <div v-if="message.isRecalled" class="message-recalled">
-          <svg class="recall-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-          </svg>
-          {{ message.messageContent }}
-        </div>
-        
         <!-- 文本消息 -->
-        <div v-else-if="message.messageContentType === 0 || !message.messageContentType" class="message-text">
+        <div v-if="message.messageContentType === 0 || !message.messageContentType" class="message-text">
           {{ message.messageContent }}
         </div>
         
@@ -176,6 +176,7 @@
       size="sm"
       class="message-avatar"
     />
+    </template>
   </div>
   
 </template>
@@ -486,18 +487,21 @@ const downloadFile = () => {
 }
 
 .message-recalled {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-style: italic;
+  text-align: center;
   color: #999;
-  font-size: 14px;
+  font-size: 13px;
+  padding: 8px 0;
+  width: 100%;
+  margin: 0;
 }
 
-.recall-icon {
-  width: 14px;
-  height: 14px;
-  color: #999;
+/* 撤回消息的特殊布局 */
+.message-recalled-item {
+  justify-content: center;
+}
+
+.message-recalled-item .message-recalled {
+  flex: 1;
 }
 
 .message-likes {

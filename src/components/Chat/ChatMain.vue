@@ -259,7 +259,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
   })
   
   // 撤回（只有自己发送的消息且在2分钟内可以撤回）
-  const canRecall = message.isSent && !message.isRecalled && (Date.now() - message.timestamp) < 2000 * 60 * 1000
+  const canRecall = message.isSent && !message.isRecalled && (Date.now() - message.timestamp) < 5000 * 60 * 1000
   if (canRecall) {
     items.push({
       key: 'recall',
@@ -332,9 +332,9 @@ const toggleLike = (message: Message) => {
 
 // 撤回消息
 const recallMessage = async (message: Message) => {
-  // 检查是否可以撤回（2分钟内）
+  // 检查是否可以撤回（5分钟内）
   const timeDiff = Date.now() - message.timestamp
-  if (timeDiff > 2000 * 60 * 1000) {
+  if (timeDiff > 5000 * 60 * 1000) {
     alert('消息发送时间超过2分钟，无法撤回')
     return
   }

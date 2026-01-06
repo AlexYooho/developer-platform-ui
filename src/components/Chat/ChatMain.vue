@@ -143,6 +143,8 @@ import type { ContextMenuItem } from '@/components/Common/ContextMenu.vue'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useModal } from '@/composables/useModal'
 import Modal from '@/components/Common/Modal.vue'
+import api from '@/utils/api'
+import { ErrorHandlers } from '@/utils/errorHandler'
 
 export interface Message {
   // id: string
@@ -257,7 +259,7 @@ const menuItems = computed<ContextMenuItem[]>(() => {
   })
   
   // 撤回（只有自己发送的消息且在2分钟内可以撤回）
-  const canRecall = message.isSent && !message.isRecalled && (Date.now() - message.timestamp) < 20 * 60 * 1000
+  const canRecall = message.isSent && !message.isRecalled && (Date.now() - message.timestamp) < 2000 * 60 * 1000
   if (canRecall) {
     items.push({
       key: 'recall',
@@ -329,17 +331,29 @@ const toggleLike = (message: Message) => {
 }
 
 // 撤回消息
-const recallMessage = (message: Message) => {
+const recallMessage = async (message: Message) => {
   // 检查是否可以撤回（2分钟内）
   const timeDiff = Date.now() - message.timestamp
-  if (timeDiff > 2 * 60 * 1000) {
+  if (timeDiff > 2000 * 60 * 1000) {
     alert('消息发送时间超过2分钟，无法撤回')
     return
   }
-  
-  message.isRecalled = true
-  message.messageContent = '你撤回了一条消息'
-  
+
+  try{
+    const data = {
+      message_id: message.id,
+      target_id: props.activeContact?.target_id,
+    }
+    const response = await api.message.withdrawMessage(props.activeContact!.type,data);
+    if(response.code !== 200) {
+      alert(response.msg)
+      return
+    }
+    message.isRecalled = true
+    message.messageContent = '你撤回了一条消息'
+  } catch (error) {
+    await alert(ErrorHandlers.convert(error))
+  }
 }
 
 const handleDelete = (message: Message) => {

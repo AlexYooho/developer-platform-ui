@@ -4,7 +4,7 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 // 响应数据接口
 export interface ApiResponse<T = any> {
   code: number
-  message: string
+  msg: string
   data: T
 }
 
@@ -71,7 +71,6 @@ class HttpClient {
       },
       (error) => {
         this.hideLoading()
-        console.error('❌ 请求错误:', error)
         return Promise.reject(error)
       }
     )
@@ -93,18 +92,16 @@ class HttpClient {
         } else if (data.code === 401) {
           // 未授权，清除 token 并跳转登录
           this.handleUnauthorized()
-          return Promise.reject(new Error(data.message || '未授权'))
+          return Promise.reject(new Error(data.msg || '未授权'))
         } else {
           // 其他业务错误
-          const error = new Error(data.message || '请求失败')
+          const error = new Error(data.msg || '请求失败')
           this.handleError(error, response.config)
           return Promise.reject(error)
         }
       },
       (error: AxiosError) => {
         this.hideLoading()
-        console.error('❌ 响应错误:', error)
-
         let message = '网络错误'
         
         if (error.response) {
@@ -191,7 +188,6 @@ class HttpClient {
   private handleError(error: Error, config?: AxiosRequestConfig): void {
     if (config?.showError !== false) {
       // 这里可以显示错误提示
-      console.error('💥 错误提示:', error.message)
       // 可以集成 Element Plus 的 Message 组件
       // ElMessage.error(error.message)
     }

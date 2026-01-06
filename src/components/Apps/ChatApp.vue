@@ -106,7 +106,7 @@ interface ConversationData {
 
 // 后端消息数据类型
 interface MessageData {
-  id: number
+  id: string
   is_sent: boolean
   send_id: number
   receiver_id: number
@@ -198,7 +198,7 @@ const fetchConversations = async () => {
 // 转换后端消息数据为前端Message格式
 const convertMessageToFrontend = (messageData: MessageData): Message => {
   return {
-    id: messageData.id.toString(),
+    id: messageData.id,
     isSent: messageData.is_sent,
     sendId: messageData.send_id,
     receiverId: messageData.receiver_id,

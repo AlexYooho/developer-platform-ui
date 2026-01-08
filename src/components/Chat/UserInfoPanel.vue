@@ -272,7 +272,7 @@ const convertSameGroupInfoToFrontend = (sameGroupInfo: SameGroupInfo): SharedGro
 
 // 获取好友详情信息
 const fetchFriendDetailInfo = async () => {
-  const response = await api.friend.getFriendDetailInfo(props.contact!.id)
+  const response = await api.friend.getFriendDetailInfo(props.contact!.target_id)
   if(response.code === 200 && response.data) {
     // 转换好友信息
     var friendInfo = convertFriendDetailInfoToFrontend(response.data)

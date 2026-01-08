@@ -36,8 +36,8 @@ export const messageApi = {
   },
 
   // 拉取消息
-  getMessages: (targetId: string | number) => {
-    return http.get(`/message-module/api/message/0/loadMessage/WEB/${targetId}`)
+  getMessages: (targetId: number, conversationType: number, convSeq: number) => {
+    return http.get(`/message-module/api/message/${conversationType}/loadMessage/0/${targetId}/${convSeq}`)
   },
 
   // 发送消息

@@ -23,6 +23,7 @@
         v-if="activeContact"
         :active-contact="activeContact"
         :messages="currentMessages"
+        :load-history-fn="handleLoadHistory"
         @send-message="handleSendMessage"
         @voice-call="handleVoiceCall"
         @video-call="handleVideoCall"
@@ -153,7 +154,7 @@ const showUserInfo = ref(true)
 // 当前聊天的消息
 const currentMessages = computed(() => {
   if (!activeContact.value) return []
-  return allMessages[activeContact.value.id] || []
+  return allMessages[activeContact.value.target_id] || []
 })
 
 // 转换后端数据为前端格式
@@ -221,10 +222,10 @@ const convertMessageToFrontend = (messageData: MessageData): Message => {
 }
 
 // 获取指定联系人的消息列表
-const fetchMessages = async (targetId: number) => {
+const fetchMessages = async (targetId: number, conversationType: number) => {
   try {
-    const response = await api.message.getMessages(targetId)
-    if (response.data && response.code === 200) {
+    const response = await api.message.getMessages(targetId, conversationType, 0)
+    if (response.data && response.code === 200 && response.data.length > 0) {
       // 转换消息数据
       const messages = response.data.map((msgData: MessageData) => convertMessageToFrontend(msgData))
       
@@ -233,20 +234,74 @@ const fetchMessages = async (targetId: number) => {
       
       // 存储到对应联系人的消息列表中
       allMessages[targetId] = messages
-    } else {
-      // 如果获取失败，设置为空数组
-      allMessages[targetId] = []
-    }
+    } 
   } catch (error) {
     // 如果请求失败，设置为空数组
     allMessages[targetId] = []
   }
 }
 
+// 获取历史消息（向上滚动时调用）
+const fetchHistoryMessages = async (targetId: number, conversationType: number) => {
+  try {
+    // 获取当前消息列表中最小的 convSeq
+    const existingMessages = allMessages[targetId] || []
+    if (existingMessages.length === 0) return false
+    
+    // 找到最小的 convSeq，然后减1来获取更早的消息
+    const minConvSeq = Math.min(...existingMessages.map(msg => msg.convSeq || 0))
+    const historyConvSeq = Math.max(0, minConvSeq - 1) // 确保不小于0
+    
+    // 使用更小的 convSeq 请求历史消息
+    const response = await api.message.getMessages(targetId, conversationType, historyConvSeq)
+    
+    if (response.data && response.code === 200) {
+      // 只要后端返回数据长度大于0，就说明还有更多历史消息
+      const hasMoreData = response.data.length > 0
+      if (hasMoreData) {
+        // 转换消息数据
+        const historyMessages = response.data.map((msgData: MessageData) => convertMessageToFrontend(msgData))
+        
+        // 过滤掉已存在的消息（基于ID去重）
+        const existingIds = new Set(existingMessages.map(msg => msg.id))
+        const newHistoryMessages = historyMessages.filter((msg: Message) => !existingIds.has(msg.id))
+        
+        // 如果有新消息，则添加到本地缓存
+        if (newHistoryMessages.length > 0) {
+          // 将历史消息添加到现有消息前面
+          const allMessagesForContact = [...newHistoryMessages, ...existingMessages]
+          
+          // 按时间排序（从旧到新）
+          allMessagesForContact.sort((a: Message, b: Message) => a.timestamp - b.timestamp)
+          
+          // 更新本地缓存
+          allMessages[targetId] = allMessagesForContact
+          
+        }
+        
+        // 无论是否有新消息，只要后端返回了数据，就说明可以继续翻页
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return false
+    }
+  } catch (error) {
+    return false
+  }
+}
+
 // 处理联系人选择
 const handleContactSelected = async (contact: Contact) => {
-  // 先获取该联系人的消息列表
-  await fetchMessages(contact.target_id)
+  // 如果点击的是当前已激活的联系人，不需要重新获取消息
+  if (activeContact.value && activeContact.value.id === contact.id) {
+    console.log('点击的是当前联系人，跳过消息获取')
+    return
+  }
+  
+  // 先获取该联系人的消息列表（只在首次点击时获取）
+  await fetchMessages(contact.target_id, contact.type)
   
   // 然后设置活跃联系人（这样消息已经准备好了）
   activeContact.value = contact
@@ -264,9 +319,9 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
   if (!activeContact.value) return
 
   const sendData = {
-    target_id: 2,
+    target_id: activeContact.value.target_id,
     message_main_type: activeContact.value.type,
-    message_content_type: 0,
+    message_content_type: activeContact.value.type,
     message_content: data.text,
     terminal_type: 0
   }
@@ -296,10 +351,10 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
   }
   
   // 添加到消息列表
-  if (!allMessages[activeContact.value.id]) {
-    allMessages[activeContact.value.id] = []
+  if (!allMessages[activeContact.value.target_id]) {
+    allMessages[activeContact.value.target_id] = []
   }
-  allMessages[activeContact.value.id]?.push(newMessage)
+  allMessages[activeContact.value.target_id]?.push(newMessage)
   
   // 更新联系人的最后消息
   const contactIndex = contacts.findIndex(c => c.id === activeContact.value?.id)
@@ -353,7 +408,7 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
     }
     
     if (activeContact.value) {
-      allMessages[activeContact.value.id]?.push(replyMessage)
+      allMessages[activeContact.value.target_id]?.push(replyMessage)
       
       // 更新联系人的最后消息
       if (contactIndex !== -1) {
@@ -362,6 +417,15 @@ const handleSendMessage = async (data: { text: string; type: string }) => {
       }
     }
   }, 1000 + Math.random() * 2000)
+}
+
+// 处理加载历史消息
+const handleLoadHistory = async () => {
+  if (!activeContact.value) return false
+  
+  // 加载历史消息
+  const result = await fetchHistoryMessages(activeContact.value.target_id, activeContact.value.type)
+  return result;
 }
 
 // 处理语音通话
@@ -403,10 +467,10 @@ const handleFileUpload = (file: File) => {
       // fileUrl: URL.createObjectURL(file)
     }
     
-    if (!allMessages[activeContact.value.id]) {
-      allMessages[activeContact.value.id] = []
+    if (!allMessages[activeContact.value.target_id]) {
+      allMessages[activeContact.value.target_id] = []
     }
-    allMessages[activeContact.value.id]?.push(fileMessage)
+    allMessages[activeContact.value.target_id]?.push(fileMessage)
   }
 }
 
@@ -414,7 +478,7 @@ const handleFileUpload = (file: File) => {
 const handleMessageDelete = (messageId: string) => {
   if (!activeContact.value) return
   
-  const messages = allMessages[activeContact.value.id]
+  const messages = allMessages[activeContact.value.target_id]
   if (messages) {
     const index = messages.findIndex(m => m.id === messageId)
     if (index !== -1) {
@@ -427,7 +491,7 @@ const handleMessageDelete = (messageId: string) => {
 const handleMessageResend = (messageId: string) => {
   if (!activeContact.value) return
   
-  const messages = allMessages[activeContact.value.id]
+  const messages = allMessages[activeContact.value.target_id]
   if (messages) {
     const message = messages.find(m => m.id === messageId)
     if (message) {

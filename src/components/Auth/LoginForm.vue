@@ -120,8 +120,6 @@ const handleSubmit = async () => {
       password: form.password
     })
     
-    console.log('登录响应:', response)
-    
     // 触发登录成功事件
     emit('login-success', {
       account: form.account,

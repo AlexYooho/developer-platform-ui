@@ -40,8 +40,23 @@
     </div>
 
     <!-- 消息区域 -->
-    <div class="messages-container" ref="messagesContainer">
+    <div class="messages-container" ref="messagesContainer" @scroll="handleScroll">
       <div class="messages-list">
+        <!-- 历史消息加载指示器 -->
+        <div v-if="isLoadingHistory" class="loading-history">
+          <div class="loading-spinner">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span class="loading-text">加载历史消息中...</span>
+        </div>
+        
+        <!-- 没有更多历史消息提示 -->
+        <div v-else-if="!hasMoreHistory && messages.length > 0" class="no-more-history">
+          <span>没有更多历史消息了</span>
+        </div>
+        
         <!-- 日期分隔符 -->
         <div 
           v-for="(group, date) in groupedMessages" 
@@ -180,6 +195,7 @@ export interface Message {
 interface Props {
   activeContact?: Contact | null
   messages?: Message[]
+  loadHistoryFn?: () => Promise<boolean>
 }
 
 interface Emits {
@@ -187,6 +203,7 @@ interface Emits {
   (e: 'voice-call', contact: Contact): void
   (e: 'video-call', contact: Contact): void
   (e: 'file-upload', file: File): void
+  (e: 'context-menu', event: MouseEvent, message: Message): void
   (e: 'message-delete', messageId: string): void
   (e: 'message-resend', messageId: string): void
 }
@@ -201,6 +218,9 @@ const emit = defineEmits<Emits>()
 const messagesContainer = ref<HTMLElement>()
 const isTyping = ref(false)
 const typingTimer = ref<number>()
+const isLoadingHistory = ref(false)
+const hasMoreHistory = ref(true)
+const justLoadedHistory = ref(false)
 
 // 全局右键菜单
 const contextMenu = useContextMenu()
@@ -423,6 +443,7 @@ const formatDate = (dateString: string) => {
 
 // 滚动到底部
 const scrollToBottom = (smooth = true) => {
+  console.log('调用 scrollToBottom，justLoadedHistory:', justLoadedHistory.value)
   nextTick(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTo({
@@ -435,12 +456,78 @@ const scrollToBottom = (smooth = true) => {
 
 // 立即滚动到底部（用于联系人切换）
 const scrollToBottomImmediate = () => {
+  console.log('调用 scrollToBottomImmediate，justLoadedHistory:', justLoadedHistory.value)
   // 使用 setTimeout 确保 DOM 完全更新后再滚动
   setTimeout(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   }, 0)
+}
+
+// 处理滚动事件
+const handleScroll = async () => {
+  if (!messagesContainer.value) {
+    console.log('没有 messagesContainer')
+    return
+  }
+  
+  if (isLoadingHistory.value) {
+    console.log('正在加载历史消息，跳过')
+    return
+  }
+  
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+  
+  console.log('滚动事件 - scrollTop:', scrollTop, 'hasMoreHistory:', hasMoreHistory.value, 'isLoadingHistory:', isLoadingHistory.value)
+  
+  // 当滚动到顶部附近时加载历史消息
+  if (scrollTop < 100 && hasMoreHistory.value) {
+    console.log('触发历史消息加载')
+    isLoadingHistory.value = true
+    justLoadedHistory.value = true
+    
+    // 记录当前滚动位置
+    const previousScrollHeight = scrollHeight
+    
+    try {
+      console.log('开始调用 loadHistoryFn')
+      // 调用父组件的历史消息加载方法
+      const hasMore = props.loadHistoryFn ? await props.loadHistoryFn() : false
+      console.log('loadHistoryFn 返回结果:', hasMore)
+      
+      // 只有在确实没有更多消息时才设置为false
+      if (!hasMore) {
+        hasMoreHistory.value = false
+        console.log('没有更多历史消息了')
+      }
+      
+      // 等待Vue完成所有DOM更新
+      await nextTick()
+      await nextTick()
+      
+      // 加载完成后，保持用户的阅读位置
+      if (messagesContainer.value) {
+        const newScrollHeight = messagesContainer.value.scrollHeight
+        const scrollDiff = newScrollHeight - previousScrollHeight
+        const newScrollTop = scrollTop + scrollDiff
+        messagesContainer.value.scrollTop = newScrollTop
+        console.log('滚动位置调整 - 原高度:', previousScrollHeight, '新高度:', newScrollHeight, '差值:', scrollDiff, '新位置:', newScrollTop)
+      }
+      
+      // 延迟重置标志，确保所有监听器都已经执行
+      setTimeout(() => {
+        justLoadedHistory.value = false
+        console.log('重置 justLoadedHistory 标志')
+      }, 500)
+    } catch (error) {
+      console.error('加载历史消息失败:', error)
+      justLoadedHistory.value = false
+    } finally {
+      isLoadingHistory.value = false
+      console.log('历史消息加载流程结束，isLoadingHistory 设置为 false')
+    }
+  }
 }
 
 // 处理发送消息
@@ -514,16 +601,34 @@ watch(() => props.activeContact, (newContact, oldContact) => {
 // 监听消息prop变化 - 用于联系人切换时的消息加载
 watch(() => props.messages, (newMessages, oldMessages) => {
   // 如果是联系人切换导致的消息变化（消息数组完全替换）
-  if (newMessages && oldMessages && newMessages !== oldMessages) {
+  // 但不是加载历史消息导致的变化
+  if (newMessages && oldMessages && newMessages !== oldMessages && !justLoadedHistory.value) {
+    console.log('消息数组变化，滚动到底部')
     scrollToBottomImmediate()
+  } else if (justLoadedHistory.value) {
+    console.log('加载历史消息导致的消息数组变化，不滚动到底部')
   }
 }, { immediate: false })
 
 // 监听消息数量变化 - 只在消息增加时滚动（新消息）
 watch(() => messages.value.length, (newLength, oldLength) => {
   // 只有在消息数量增加时才滚动（新消息），避免切换联系人时的重复滚动
-  if (oldLength !== undefined && newLength > oldLength) {
+  // 但是如果刚刚加载了历史消息，则不滚动到底部
+  if (oldLength !== undefined && newLength > oldLength && !justLoadedHistory.value) {
+    console.log('检测到新消息，滚动到底部')
     scrollToBottom()
+  } else if (justLoadedHistory.value) {
+    console.log('刚刚加载了历史消息，不滚动到底部')
+  }
+})
+
+// 监听联系人变化，重置历史消息状态
+watch(() => props.activeContact?.id, (newId, oldId) => {
+  if (newId !== oldId) {
+    console.log('联系人切换，重置历史消息状态 - 从', oldId, '到', newId)
+    hasMoreHistory.value = true
+    isLoadingHistory.value = false
+    justLoadedHistory.value = false
   }
 })
 
@@ -800,6 +905,56 @@ onUnmounted(() => {
   30% {
     transform: translateY(-10px);
   }
+}
+
+/* 历史消息加载指示器 */
+.loading-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #999;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  display: flex;
+  gap: 4px;
+  margin-right: 8px;
+}
+
+.loading-spinner span {
+  width: 6px;
+  height: 6px;
+  background-color: #999;
+  border-radius: 50%;
+  animation: loading-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-spinner span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-spinner span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes loading-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+.no-more-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #999;
+  font-size: 12px;
 }
 
 /* 响应式设计 */

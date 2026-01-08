@@ -77,8 +77,6 @@ const switchToLogin = () => {
 
 // 处理登录成功
 const handleLoginSuccess = (userData: any) => {
-  console.log('认证容器：登录成功', userData)
-  
   // 显示成功状态
   currentView.value = 'success'
   

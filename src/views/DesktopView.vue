@@ -190,7 +190,6 @@ const handleAppClick = (app: App) => {
 // 处理登录成功
 const handleLoginSuccess = (userData: any) => {
   authStore.login(userData)
-  console.log('桌面页面：用户登录成功', userData)
 }
 
 // 处理退出登录

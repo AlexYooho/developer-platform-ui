@@ -334,7 +334,7 @@ const toggleFavorite = (message: Message) => {
 }
 
 // 切换点赞状态
-const toggleLike = (message: Message) => {
+const toggleLike = async (message: Message) => {
   const wasLiked = message.isLiked
   message.isLiked = !message.isLiked
   
@@ -345,9 +345,20 @@ const toggleLike = (message: Message) => {
     message.likeCount = Math.max((message.likeCount || 0) - 1, 0)
   }
   
-  console.log(message.isLiked ? '已点赞' : '已取消点赞')
   // 这里可以调用API更新点赞状态
-  // api.message.toggleLike(message.id, message.isLiked)
+    try{
+    const likeResponse = await api.message.likeMessage(props.activeContact!.type,message.id)
+    if(likeResponse.code !== 200) {
+      alert(likeResponse.msg)
+      return
+    }
+    message.isLiked = !message.isLiked
+    message.likeCount = likeResponse.data.like_count
+  } catch (error) {
+    await alert(ErrorHandlers.convert(error))
+    message.isLiked = wasLiked
+    message.likeCount = wasLiked ? (message.likeCount || 0) - 1 : (message.likeCount || 0) + 1
+  }
 }
 
 // 撤回消息

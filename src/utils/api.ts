@@ -76,8 +76,8 @@ export const messageApi = {
   },
 
   // 点赞消息
-  likeMessage: (conversationType: number,messageId: string, data: {}) =>{
-    return http.post(`/message-module/api/message/${conversationType}/like/${messageId}`, data)
+  likeMessage: (conversationType: number,messageId: string) =>{
+    return http.post(`/message-module/api/message/${conversationType}/like/${messageId}`)
   },
 
   // 取消点赞消息

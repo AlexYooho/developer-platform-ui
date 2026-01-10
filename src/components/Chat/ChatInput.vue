@@ -1,5 +1,26 @@
 <template>
   <div class="chat-input">
+    <!-- 回复消息提示 -->
+    <div v-if="replyingTo" class="reply-indicator">
+      <div class="reply-content">
+        <div class="reply-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 17l-4-5 4-5 M20 18v-2a4 4 0 0 0-4-4H4"/>
+          </svg>
+        </div>
+        <div class="reply-text">
+          <div class="reply-to-name">回复 {{ replyingTo.sendNickname }}</div>
+          <div class="reply-to-message">{{ replyingTo.messageContent }}</div>
+        </div>
+      </div>
+      <button class="reply-close" @click="$emit('cancel-reply')" title="取消回复">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    
     <!-- 工具栏 -->
     <div class="input-toolbar">
       <!-- 表情按钮 -->
@@ -143,6 +164,7 @@ interface Props {
   disabled?: boolean
   placeholder?: string
   maxLength?: number
+  replyingTo?: any | null
 }
 
 interface Emits {
@@ -150,6 +172,7 @@ interface Emits {
   (e: 'typing'): void
   (e: 'file-upload', file: File): void
   (e: 'emoji-select', emoji: string): void
+  (e: 'cancel-reply'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -365,6 +388,85 @@ onUnmounted(() => {
   border-top: 1px solid #e9ecef;
   padding: 12px 16px;
   position: relative;
+}
+
+/* 回复消息提示 */
+.reply-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f7f9fa;
+  border-left: 3px solid #07c160;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.reply-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-icon {
+  width: 20px;
+  height: 20px;
+  color: #07c160;
+  flex-shrink: 0;
+}
+
+.reply-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.reply-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-to-name {
+  font-size: 12px;
+  color: #07c160;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.reply-to-message {
+  font-size: 13px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-close {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.reply-close:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.reply-close svg {
+  width: 16px;
+  height: 16px;
 }
 
 .input-toolbar {

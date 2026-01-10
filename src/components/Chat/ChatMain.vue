@@ -72,6 +72,7 @@
             v-for="message in group"
             :key="message.id"
             :message="message"
+            :messages="messages"
             :show-avatar="!message.isSent"
             :contact-avatar="activeContact?.avatar"
             @resend="handleResendMessage"
@@ -105,10 +106,12 @@
     <ChatInput
       v-if="activeContact"
       :disabled="!activeContact"
+      :replying-to="replyingToMessage"
       @send-message="handleSendMessage"
       @typing="handleTyping"
       @file-upload="handleFileUpload"
       @emoji-select="handleEmojiSelect"
+      @cancel-reply="cancelReply"
     />
     
     <!-- 空状态 -->
@@ -184,7 +187,7 @@ export interface Message {
   sendNickname: string
   sendTime?: string
   timestamp: number
-  referenceId?: number
+  referenceId?: string
   likeCount?: number
   atUserIds?: number[]
   isLiked?: boolean // 是否已点赞
@@ -225,6 +228,7 @@ const justLoadedHistory = ref(false)
 // 全局右键菜单
 const contextMenu = useContextMenu()
 const currentMessage = ref<Message | null>(null)
+const replyingToMessage = ref<Message | null>(null)
 
   // 模态框
 const { modalState, handleConfirm, handleCancel, alert } = useModal()
@@ -406,17 +410,14 @@ const handleDelete = async (message: Message) => {
 }
 
 // 回复
-const replyMessage = async (message: Message) => {
-  try{
-    var data = {
-      message_contant: "",
-      message_content_type: 0,
-      at_user_ids: []
-    }
-    var replyResponse = await api.message.replyMessage(props.activeContact!.type,message.id,data)
-  } catch (error) {
-    await alert(ErrorHandlers.convert(error))
-  }
+const replyMessage = (message: Message) => {
+  replyingToMessage.value = message
+  contextMenu.hideMenu()
+}
+
+// 取消回复
+const cancelReply = () => {
+  replyingToMessage.value = null
 }
 
 
@@ -476,7 +477,6 @@ const formatDate = (dateString: string) => {
 
 // 滚动到底部
 const scrollToBottom = (smooth = true) => {
-  console.log('调用 scrollToBottom，justLoadedHistory:', justLoadedHistory.value)
   nextTick(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTo({
@@ -489,7 +489,6 @@ const scrollToBottom = (smooth = true) => {
 
 // 立即滚动到底部（用于联系人切换）
 const scrollToBottomImmediate = () => {
-  console.log('调用 scrollToBottomImmediate，justLoadedHistory:', justLoadedHistory.value)
   // 使用 setTimeout 确保 DOM 完全更新后再滚动
   setTimeout(() => {
     if (messagesContainer.value) {
@@ -501,22 +500,18 @@ const scrollToBottomImmediate = () => {
 // 处理滚动事件
 const handleScroll = async () => {
   if (!messagesContainer.value) {
-    console.log('没有 messagesContainer')
     return
   }
   
   if (isLoadingHistory.value) {
-    console.log('正在加载历史消息，跳过')
     return
   }
   
   const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
   
-  console.log('滚动事件 - scrollTop:', scrollTop, 'hasMoreHistory:', hasMoreHistory.value, 'isLoadingHistory:', isLoadingHistory.value)
   
   // 当滚动到顶部附近时加载历史消息
   if (scrollTop < 100 && hasMoreHistory.value) {
-    console.log('触发历史消息加载')
     isLoadingHistory.value = true
     justLoadedHistory.value = true
     
@@ -524,15 +519,12 @@ const handleScroll = async () => {
     const previousScrollHeight = scrollHeight
     
     try {
-      console.log('开始调用 loadHistoryFn')
       // 调用父组件的历史消息加载方法
       const hasMore = props.loadHistoryFn ? await props.loadHistoryFn() : false
-      console.log('loadHistoryFn 返回结果:', hasMore)
       
       // 只有在确实没有更多消息时才设置为false
       if (!hasMore) {
         hasMoreHistory.value = false
-        console.log('没有更多历史消息了')
       }
       
       // 等待Vue完成所有DOM更新
@@ -545,27 +537,32 @@ const handleScroll = async () => {
         const scrollDiff = newScrollHeight - previousScrollHeight
         const newScrollTop = scrollTop + scrollDiff
         messagesContainer.value.scrollTop = newScrollTop
-        console.log('滚动位置调整 - 原高度:', previousScrollHeight, '新高度:', newScrollHeight, '差值:', scrollDiff, '新位置:', newScrollTop)
       }
       
       // 延迟重置标志，确保所有监听器都已经执行
       setTimeout(() => {
         justLoadedHistory.value = false
-        console.log('重置 justLoadedHistory 标志')
       }, 500)
     } catch (error) {
-      console.error('加载历史消息失败:', error)
       justLoadedHistory.value = false
     } finally {
       isLoadingHistory.value = false
-      console.log('历史消息加载流程结束，isLoadingHistory 设置为 false')
     }
   }
 }
 
 // 处理发送消息
 const handleSendMessage = (data: { text: string; type: string }) => {
-  emit('send-message', data)
+  // 如果有回复消息，将referenceId传递给父组件
+  const messageData = {
+    ...data,
+    referenceId: replyingToMessage.value?.id
+  }
+  emit('send-message', messageData)
+  
+  // 发送后清除回复状态
+  replyingToMessage.value = null
+  
   scrollToBottom()
 }
 
@@ -636,10 +633,8 @@ watch(() => props.messages, (newMessages, oldMessages) => {
   // 如果是联系人切换导致的消息变化（消息数组完全替换）
   // 但不是加载历史消息导致的变化
   if (newMessages && oldMessages && newMessages !== oldMessages && !justLoadedHistory.value) {
-    console.log('消息数组变化，滚动到底部')
     scrollToBottomImmediate()
   } else if (justLoadedHistory.value) {
-    console.log('加载历史消息导致的消息数组变化，不滚动到底部')
   }
 }, { immediate: false })
 
@@ -648,17 +643,14 @@ watch(() => messages.value.length, (newLength, oldLength) => {
   // 只有在消息数量增加时才滚动（新消息），避免切换联系人时的重复滚动
   // 但是如果刚刚加载了历史消息，则不滚动到底部
   if (oldLength !== undefined && newLength > oldLength && !justLoadedHistory.value) {
-    console.log('检测到新消息，滚动到底部')
     scrollToBottom()
   } else if (justLoadedHistory.value) {
-    console.log('刚刚加载了历史消息，不滚动到底部')
   }
 })
 
 // 监听联系人变化，重置历史消息状态
 watch(() => props.activeContact?.id, (newId, oldId) => {
   if (newId !== oldId) {
-    console.log('联系人切换，重置历史消息状态 - 从', oldId, '到', newId)
     hasMoreHistory.value = true
     isLoadingHistory.value = false
     justLoadedHistory.value = false

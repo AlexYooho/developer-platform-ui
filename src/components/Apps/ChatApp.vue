@@ -212,7 +212,7 @@ const convertMessageToFrontend = (messageData: MessageData): Message => {
     sendNickname: messageData.send_nickname,
     sendTime: messageData.send_time,
     timestamp: new Date(messageData.send_time).getTime(),
-    referenceId: messageData.reference_id,
+    referenceId: messageData.reference_id ? String(messageData.reference_id) : undefined,
     likeCount: messageData.like_count || 0,
     atUserIds: messageData.at_user_ids || [],
     isLiked: false, // 默认未点赞
@@ -315,108 +315,59 @@ const handleContactSelected = async (contact: Contact) => {
 }
 
 // 处理发送消息
-const handleSendMessage = async (data: { text: string; type: string }) => {
+const handleSendMessage = async (data: { text: string; type: string; referenceId?: string }) => {
   if (!activeContact.value) return
 
-  const sendData = {
-    target_id: activeContact.value.target_id,
-    message_main_type: activeContact.value.type,
-    message_content_type: activeContact.value.type,
-    message_content: data.text,
-    terminal_type: 0
-  }
-  const response = await api.message.sendMessage(activeContact.value.type, sendData)
-  if(response.data && response.code === 200) {
-    console.log('发送消息成功:', response.data)
-  }else{
-    console.error('发送消息失败:', response.data?.msg || '未知错误')
-  }
-  
-  const newMessage: Message = {
-    id: response.data.id,
-    isSent: response.data.is_sent,
-    sendId: response.data.send_id,
-    receiverId: response.data.receiver_id,
-    groupId: response.data.group_id,
-    messageContent: response.data.message_content,
-    messageContentType: response.data.message_content_type,
-    messageStatus: response.data.message_status,
-    readStatus: response.data.read_status,
-    sendNickname: response.data.send_nickname || '',
-    timestamp: Date.now(),
-    likeCount: 0,
-    isLiked: false,
-    isFavorited: false,
-    isRecalled: false
-  }
-  
-  // 添加到消息列表
-  if (!allMessages[activeContact.value.target_id]) {
-    allMessages[activeContact.value.target_id] = []
-  }
-  allMessages[activeContact.value.target_id]?.push(newMessage)
-  
-  // 更新联系人的最后消息
-  const contactIndex = contacts.findIndex(c => c.id === activeContact.value?.id)
-  if (contactIndex !== -1) {
-    contacts[contactIndex]!.lastMessageContent = data.text
-    contacts[contactIndex]!.lastMessageTime = Date.now()
-  }
-  
-  // 模拟发送状态变化
-  setTimeout(() => {
-    newMessage.messageStatus = 0
-    setTimeout(() => {
-      newMessage.messageStatus = 1
-      setTimeout(() => {
-        newMessage.messageStatus = 2
-      }, 1000)
-    }, 500)
-  }, 500)
-  
-  // 模拟对方回复
-  setTimeout(() => {
-    const replies = [
-      '看起来很棒！',
-      '真的很厉害！',
-      '我也想试试',
-      '教教我怎么做的',
-      '有时间一起讨论一下',
-      '期待看到最终效果',
-      '好的，明白了',
-      '收到！'
-    ]
-    const randomReply = replies[Math.floor(Math.random() * replies.length)] || '好的'
+    try{
+    const sendData: any = {
+      target_id: activeContact.value.target_id,
+      message_main_type: activeContact.value.type,
+      message_content_type: 0,
+      message_content: data.text,
+      terminal_type: 0
+    }
     
-    const replyMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      sendId: 2,
-      receiverId: activeContact.value?.target_id || 0,
-      messageContent: randomReply,
-      messageContentType: 0,
+    // 如果有回复消息ID，添加到发送数据中
+    if (data.referenceId) {
+      sendData.reference_id = data.referenceId
+    }
+    
+    const response = await api.message.sendMessage(activeContact.value.type, sendData)
+    const newMessage: Message = {
+      id: response.data.id,
+      isSent: response.data.is_sent,
+      sendId: response.data.send_id,
+      receiverId: response.data.receiver_id,
+      groupId: response.data.group_id,
+      messageContent: response.data.message_content,
+      messageContentType: response.data.message_content_type,
+      messageStatus: response.data.message_status,
+      readStatus: response.data.read_status,
+      sendNickname: response.data.send_nickname || '',
       timestamp: Date.now(),
-      isSent: false,
-      messageStatus: 2,
-      readStatus: 1,
-      sendNickname: currentUser.value?.name || '',
-      referenceId: 0,
       likeCount: 0,
-      atUserIds: [],
+      referenceId: data.referenceId || undefined,
       isLiked: false,
       isFavorited: false,
       isRecalled: false
     }
     
-    if (activeContact.value) {
-      allMessages[activeContact.value.target_id]?.push(replyMessage)
-      
-      // 更新联系人的最后消息
-      if (contactIndex !== -1) {
-        contacts[contactIndex]!.lastMessageContent = randomReply
-        contacts[contactIndex]!.lastMessageTime = Date.now()
-      }
+    // 添加到消息列表
+    if (!allMessages[activeContact.value.target_id]) {
+      allMessages[activeContact.value.target_id] = []
     }
-  }, 1000 + Math.random() * 2000)
+    allMessages[activeContact.value.target_id]?.push(newMessage)
+    
+    // 更新联系人的最后消息
+    const contactIndex = contacts.findIndex(c => c.id === activeContact.value?.id)
+    if (contactIndex !== -1) {
+      contacts[contactIndex]!.lastMessageContent = data.text
+      contacts[contactIndex]!.lastMessageTime = Date.now()
+    }
+    
+  }catch(error){
+    console.error('发送消息失败:', error)
+  }
 }
 
 // 处理加载历史消息

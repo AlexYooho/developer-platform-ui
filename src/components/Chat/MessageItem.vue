@@ -32,6 +32,15 @@
         @contextmenu.prevent="showContextMenu"
         @click="handleMessageClick"
       >
+        <!-- 回复引用 -->
+        <div v-if="message.referenceId && referencedMessage" class="message-reference">
+          <div class="reference-bar"></div>
+          <div class="reference-content">
+            <div class="reference-author">{{ referencedMessage.sendNickname }}</div>
+            <div class="reference-text">{{ referencedMessage.messageContent }}</div>
+          </div>
+        </div>
+        
         <!-- 文本消息 -->
         <div v-if="message.messageContentType === 0 || !message.messageContentType" class="message-text">
           {{ message.messageContent }}
@@ -182,7 +191,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { Message } from './ChatMain.vue'
 import Avatar from '@/components/Common/Avatar.vue'
 
@@ -190,6 +199,7 @@ interface Props {
   message: Message
   showAvatar?: boolean
   contactAvatar?: string
+  messages?: Message[]
 }
 
 interface Emits {
@@ -202,10 +212,21 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   showAvatar: true,
-  contactAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=contact'
+  contactAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=contact',
+  messages: () => []
 })
 
 const emit = defineEmits<Emits>()
+
+// 计算被引用的消息
+const referencedMessage = computed(() => {
+  if (!props.message.referenceId || !props.messages) {
+    return null
+  }
+  
+  const found = props.messages.find(msg => msg.id === props.message.referenceId)
+  return found
+})
 
 
 // 格式化时间
@@ -342,6 +363,47 @@ const downloadFile = () => {
   display: inline-block;
   max-width: 100%;
   width: fit-content;
+}
+
+/* 回复引用样式 */
+.message-reference {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.message-sent .message-reference {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.reference-bar {
+  width: 3px;
+  background: currentColor;
+  opacity: 0.5;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.reference-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.reference-author {
+  font-weight: 500;
+  margin-bottom: 2px;
+  opacity: 0.9;
+}
+
+.reference-text {
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .message-sent .message-bubble {

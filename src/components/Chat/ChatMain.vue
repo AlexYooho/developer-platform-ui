@@ -290,14 +290,12 @@ const menuItems = computed<ContextMenuItem[]>(() => {
   }
   
   // 删除（只有自己发送的消息可以删除）
-  if (message.isSent) {
-    items.push({
+  items.push({
       key: 'delete',
       label: '删除',
       iconPath: 'M3 6h18 M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
       action: () => handleDelete(message)
-    })
-  }
+  })
   
   // 回复
   items.push({
@@ -310,14 +308,14 @@ const menuItems = computed<ContextMenuItem[]>(() => {
   return items
 })
 
-// 消息操作函数
+// 复制
 const copyMessage = (message: Message) => {
   navigator.clipboard.writeText(message.messageContent)
   // 可以添加复制成功的提示
   console.log('消息已复制到剪贴板')
 }
 
-// 转发消息
+// 转发
 const forwardMessage = (message: Message) => {
   // 这里可以打开转发对话框，选择转发的联系人
   console.log('转发消息:', message.messageContent)
@@ -325,7 +323,7 @@ const forwardMessage = (message: Message) => {
   // emit('forward-message', message)
 }
 
-// 切换收藏状态
+// 收藏/取消收藏
 const toggleFavorite = (message: Message) => {
   message.isFavorited = !message.isFavorited
   console.log(message.isFavorited ? '已收藏' : '已取消收藏')
@@ -333,7 +331,7 @@ const toggleFavorite = (message: Message) => {
   // api.message.toggleFavorite(message.id, message.isFavorited)
 }
 
-// 切换点赞状态
+// 点赞/取消点赞
 const toggleLike = async (message: Message) => {
   const wasLiked = message.isLiked
   message.isLiked = !message.isLiked
@@ -361,7 +359,7 @@ const toggleLike = async (message: Message) => {
   }
 }
 
-// 撤回消息
+// 撤回
 const recallMessage = async (message: Message) => {
   // 检查是否可以撤回（5分钟内）
   const timeDiff = Date.now() - message.timestamp
@@ -387,14 +385,38 @@ const recallMessage = async (message: Message) => {
   }
 }
 
-const handleDelete = (message: Message) => {
-  // 这里可以添加删除确认逻辑
-  console.log('删除消息:', message.id)
+// 删除
+const handleDelete = async (message: Message) => {
+  try{
+    const data = {
+      target_id: props.activeContact?.target_id,
+      message_id: message.id,
+      all: false
+    }
+    var deleteResponse = await api.message.deleteMessage(props.activeContact!.type,data)
+    if(deleteResponse.code !== 200) {
+      alert(deleteResponse.msg)
+      return
+    }
+    message.isRecalled = true
+    message.messageContent = '你删除了一条消息'
+  }catch(error){
+    await alert(ErrorHandlers.convert(error))
+  }
 }
 
-const replyMessage = (message: Message) => {
-  // 这里可以添加回复逻辑
-  console.log('回复消息:', message.id)
+// 回复
+const replyMessage = async (message: Message) => {
+  try{
+    var data = {
+      message_contant: "",
+      message_content_type: 0,
+      at_user_ids: []
+    }
+    var replyResponse = await api.message.replyMessage(props.activeContact!.type,message.id,data)
+  } catch (error) {
+    await alert(ErrorHandlers.convert(error))
+  }
 }
 
 
